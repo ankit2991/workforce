@@ -27,19 +27,19 @@ export const MobileShell: React.FC<MobileShellProps> = ({
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#020509] flex justify-center items-start sm:py-8 selection:bg-[#1687FF]/30 relative overflow-x-hidden">
+    <div className="h-[100dvh] w-full bg-[#020509] flex justify-center items-center sm:py-3 sm:px-4 selection:bg-[#1687FF]/30 relative overflow-hidden">
       {/* Ambient background glow for desktop preview */}
       <div className="hidden sm:block absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-[#1687FF]/10 via-[#7B22FF]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
       {/* Centered Mobile App Container */}
-      <div className="w-full max-w-[430px] min-h-screen sm:min-h-[880px] sm:max-h-[920px] bg-[#050B10] text-[#F5F8FA] relative flex flex-col sm:rounded-[40px] sm:border sm:border-white/[0.12] shadow-[0_25px_70px_rgba(0,0,0,0.85)] sm:ring-1 sm:ring-white/[0.05] overflow-hidden">
+      <div className="w-full max-w-[430px] h-[100dvh] sm:h-[min(844px,calc(100dvh-1.5rem))] bg-[#050B10] text-[#F5F8FA] relative flex flex-col sm:rounded-[40px] sm:border sm:border-white/[0.12] shadow-[0_25px_70px_rgba(0,0,0,0.85)] sm:ring-1 sm:ring-white/[0.05] overflow-hidden">
         {/* Global App Header */}
         {showHeader && (
           <AppHeader title={headerTitle} subtitle={headerSubtitle} />
         )}
 
         {/* Scrollable Main Viewport */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden safe-bottom">
+        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
 

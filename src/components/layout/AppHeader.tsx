@@ -25,7 +25,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle }) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#050B10]/80 backdrop-blur-xl border-b border-white/[0.08] px-4 py-3 safe-top transition-all">
+    <header className="shrink-0 sticky top-0 z-40 w-full bg-[#050B10]/80 backdrop-blur-xl border-b border-white/[0.08] px-4 py-3 safe-top transition-all">
       <div className="flex items-center justify-between">
         {/* Left: User Avatar on Home OR Brand on Subpages */}
         {isHome ? (

@@ -14,7 +14,7 @@ export const BottomNavigation: React.FC = () => {
   ];
 
   return (
-    <nav className="sticky bottom-0 z-40 w-full bg-[#050B10]/95 backdrop-blur-2xl border-t border-white/[0.08] px-4 py-2 safe-bottom transition-all">
+    <nav className="shrink-0 sticky bottom-0 z-40 w-full bg-[#050B10]/95 backdrop-blur-2xl border-t border-white/[0.08] px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-all">
       <div className="w-full flex items-center justify-around">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
