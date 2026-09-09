@@ -1,0 +1,432 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  EMPLOYEE
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  PROBATION
+  TERMINATED
+}
+
+enum TransactionType {
+  SALARY_CREDIT
+  SALARY_ADVANCE
+  WITHDRAWAL
+  REMITTANCE
+  SHOP_PAYMENT
+  REFUND
+  GAMING_TOPUP
+  GAMING_CASHOUT
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+enum AdvanceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DISBURSED
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+enum GamingTxType {
+  TOP_UP
+  CASH_OUT
+  BET
+  WIN
+  LOSS
+}
+
+enum GameBadge {
+  HOT
+  NEW
+  POPULAR
+  DEFAULT
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  mobile       String      @unique
+  email        String?     @unique
+  passwordHash String?
+  role         Role        @default(EMPLOYEE)
+  status       UserStatus  @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  employee           Employee?
+  wallet             Wallet?
+  gamingWallet       GamingWallet?
+  walletTransactions WalletTransaction[]
+  gamingTransactions GamingTransaction[]
+  salaryAdvances     SalaryAdvance[]
+  withdrawals        WithdrawalRequest[]
+  orders             Order[]
+  notifications      Notification[]
+  refreshTokens      RefreshToken[]
+  auditLogs          AuditLog[]
+
+  @@map("users")
+}
+
+model Company {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  code      String   @unique
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@map("companies")
+}
+
+model Employee {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String         @unique @db.ObjectId
+  companyId     String         @db.ObjectId
+  employeeCode  String         @unique
+  firstName     String
+  lastName      String
+  monthlySalary Float          @default(0.0)
+  joiningDate   DateTime       @default(now())
+  department    String?
+  designation   String?
+  status        EmployeeStatus @default(ACTIVE)
+  profileImage  String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user               User                @relation(fields: [userId], references: [id])
+  company            Company             @relation(fields: [companyId], references: [id])
+  wallet             Wallet?
+  gamingWallet       GamingWallet?
+  salaryAdvances     SalaryAdvance[]
+  withdrawalRequests WithdrawalRequest[]
+  orders             Order[]
+
+  @@map("employees")
+}
+
+model Wallet {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String   @unique @db.ObjectId
+  employeeId       String?  @unique @db.ObjectId
+  currency         String   @default("MYR")
+  availableBalance Float    @default(0.0)
+  totalEarned      Float    @default(0.0)
+  totalAdvance     Float    @default(0.0)
+  totalWithdrawn   Float    @default(0.0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id])
+  employee     Employee?           @relation(fields: [employeeId], references: [id])
+  transactions WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  walletId        String            @db.ObjectId
+  userId          String            @db.ObjectId
+  referenceNumber String            @unique
+  type            TransactionType
+  amount          Float
+  balanceBefore   Float
+  balanceAfter    Float
+  status          TransactionStatus @default(COMPLETED)
+  description     String?
+  metadata        Json?
+  createdAt       DateTime          @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("wallet_transactions")
+}
+
+model SalaryAdvance {
+  id                      String        @id @default(auto()) @map("_id") @db.ObjectId
+  employeeId              String        @db.ObjectId
+  userId                  String        @db.ObjectId
+  amount                  Float
+  availableLimitAtRequest Float
+  status                  AdvanceStatus @default(PENDING)
+  reason                  String?
+  requestedAt             DateTime      @default(now())
+  approvedAt              DateTime?
+  disbursedAt             DateTime?
+  rejectedReason          String?
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@map("salary_advances")
+}
+
+model WithdrawalRequest {
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  employeeId      String           @db.ObjectId
+  userId          String           @db.ObjectId
+  amount          Float
+  bankName        String
+  accountHolder   String
+  accountNumber   String
+  status          WithdrawalStatus @default(PENDING)
+  referenceNumber String           @unique
+  requestedAt     DateTime         @default(now())
+  processedAt     DateTime?
+  rejectedReason  String?
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@map("withdrawal_requests")
+}
+
+model GamingWallet {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @unique @db.ObjectId
+  employeeId String?  @unique @db.ObjectId
+  currency   String   @default("MYR")
+  balance    Float    @default(0.0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id])
+  employee     Employee?           @relation(fields: [employeeId], references: [id])
+  transactions GamingTransaction[]
+
+  @@map("gaming_wallets")
+}
+
+model GamingTransaction {
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  gamingWalletId  String            @db.ObjectId
+  userId          String            @db.ObjectId
+  type            GamingTxType
+  amount          Float
+  balanceBefore   Float
+  balanceAfter    Float
+  status          TransactionStatus @default(COMPLETED)
+  referenceNumber String            @unique
+  gameId          String?
+  roundId         String?
+  description     String?
+  metadata        Json?
+  createdAt       DateTime          @default(now())
+
+  gamingWallet GamingWallet @relation(fields: [gamingWalletId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@map("gaming_transactions")
+}
+
+model GameCategory {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  icon      String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  games Game[]
+
+  @@map("game_categories")
+}
+
+model Game {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  slug       String    @unique
+  categoryId String    @db.ObjectId
+  provider   String    @default("WorkPlay Originals")
+  thumbnail  String
+  banner     String?
+  minBet     Float     @default(1.0)
+  maxBet     Float     @default(500.0)
+  status     GameBadge @default(DEFAULT)
+  tag        String?
+  isFeatured Boolean   @default(false)
+  isActive   Boolean   @default(true)
+  sortOrder  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  category GameCategory @relation(fields: [categoryId], references: [id])
+
+  @@map("games")
+}
+
+model ProductCategory {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  icon      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@map("product_categories")
+}
+
+model Product {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  slug             String   @unique
+  description      String
+  shortDescription String?
+  image            String
+  price            Float
+  points           Int?     @default(0)
+  stock            Int      @default(100)
+  categoryId       String   @db.ObjectId
+  isFeatured       Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  category   ProductCategory @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Order {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber     String      @unique
+  userId          String      @db.ObjectId
+  employeeId      String?     @db.ObjectId
+  totalAmount     Float
+  paymentMethod   String      @default("WALLET")
+  status          OrderStatus @default(PROCESSING)
+  shippingAddress Json?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id])
+  employee Employee?   @relation(fields: [employeeId], references: [id])
+  items    OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  orderId   String @db.ObjectId
+  productId String @db.ObjectId
+  quantity  Int    @default(1)
+  price     Float
+  subtotal  Float
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  title     String
+  message   String
+  type      String   @default("INFO")
+  isRead    Boolean  @default(false)
+  link      String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model Banner {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  title      String
+  subtitle   String?
+  tag        String?  @default("HOT")
+  ctaText    String   @default("Play Now →")
+  ctaLink    String   @default("/gaming")
+  bgGradient String?
+  image      String?
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@map("banners")
+}
+
+model RefreshToken {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  token     String    @unique
+  userId    String    @db.ObjectId
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @db.ObjectId
+  action    String
+  resource  String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}

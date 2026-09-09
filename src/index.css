@@ -1,0 +1,86 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --bg-main: #050B10;
+  --bg-secondary: #0B141C;
+  --bg-card: #101B24;
+  --border-subtle: #172631;
+  --primary-blue: #1687FF;
+  --dark-blue: #075DA8;
+  --success: #00C982;
+  --danger: #FF455B;
+  --purple-accent: #7B22FF;
+  --purple-secondary: #A83DF4;
+  --text-primary: #F5F8FA;
+  --text-secondary: #8493A1;
+  --text-muted: #536270;
+}
+
+body {
+  background-color: #03070b;
+  color: #F5F8FA;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050B10;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #172631;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1687FF;
+}
+
+/* Hide scrollbar for clean horizontal category pills */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe area utilities */
+.safe-bottom {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 16px));
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Smooth glass & gradient card styles */
+.card-surface {
+  background-color: #101B24;
+  border: 1px solid #172631;
+  border-radius: 18px;
+}
+
+.card-gradient-blue {
+  background: linear-gradient(135deg, #075DA8 0%, #1687FF 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 30px -10px rgba(22, 135, 255, 0.4);
+}
+
+.card-gradient-purple {
+  background: linear-gradient(135deg, #4A1088 0%, #7B22FF 60%, #A83DF4 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 30px -10px rgba(123, 34, 255, 0.45);
+}
