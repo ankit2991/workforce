@@ -89,7 +89,7 @@ const creditWalletSchema = z.object({
 });
 
 export const creditEmployeeWallet = async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const { amount, description } = creditWalletSchema.parse(req.body);
 
   const employee = await prisma.employee.findUnique({
@@ -170,7 +170,7 @@ export const getAdminAdvances = async (req: AuthenticatedRequest, res: Response)
 };
 
 export const updateAdvanceStatus = async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const { status, rejectedReason } = req.body;
 
   const advance = await prisma.salaryAdvance.findUnique({
@@ -280,7 +280,7 @@ export const getAdminWithdrawals = async (req: AuthenticatedRequest, res: Respon
 };
 
 export const updateWithdrawalStatus = async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const { status, rejectedReason } = req.body;
 
   const wdr = await prisma.withdrawalRequest.findUnique({

@@ -38,7 +38,7 @@ export const getNotifications = async (req: AuthenticatedRequest, res: Response)
 };
 
 export const markAsRead = async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const userId = req.user?.id;
 
   const notif = await prisma.notification.findFirst({

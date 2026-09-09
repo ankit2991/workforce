@@ -75,7 +75,7 @@ export const getTransactions = async (req: AuthenticatedRequest, res: Response) 
 };
 
 export const getTransactionById = async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const userId = req.user?.id;
 
   const transaction = await prisma.walletTransaction.findFirst({

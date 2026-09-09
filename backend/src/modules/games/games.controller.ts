@@ -59,7 +59,7 @@ export const getGames = async (req: Request, res: Response) => {
 };
 
 export const getGameBySlug = async (req: Request, res: Response) => {
-  const { slug } = req.params;
+  const slug = req.params.slug as string;
   const game = await prisma.game.findUnique({
     where: { slug },
     include: { category: true },
