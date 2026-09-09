@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Sparkles, Trophy, RotateCcw, Volume2, ShieldCheck, Flame } from 'lucide-react';
-import { Game } from '../../types';
+import type { Game } from '../../types';
 import { apiRequest } from '../../lib/apiClient';
 import { toast } from 'sonner';
 

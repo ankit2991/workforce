@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Trash2, Plus, Minus, ShoppingBag, CheckCircle2, ShieldCheck, ArrowRight } from 'lucide-react';
-import { CartItem } from '../../types';
+import type { CartItem } from '../../types';
 import { apiRequest } from '../../lib/apiClient';
 import { toast } from 'sonner';
 

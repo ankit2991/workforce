@@ -11,7 +11,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
-import { NotificationItem } from '../../types';
+import type { NotificationItem } from '../../types';
 import { toast } from 'sonner';
 
 export const NotificationsPage: React.FC = () => {

@@ -1,4 +1,4 @@
-import { User, Wallet, GamingWallet, WalletTransaction, Game, GameCategory, Product, Order, NotificationItem, BannerItem } from '../types';
+import type { User, Wallet, GamingWallet, WalletTransaction, Game, GameCategory, Product, Order, NotificationItem, BannerItem } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1';
 

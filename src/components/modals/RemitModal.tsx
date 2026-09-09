@@ -5,12 +5,14 @@ import { toast } from 'sonner';
 interface RemitModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   availableBalance?: number;
 }
 
 export const RemitModal: React.FC<RemitModalProps> = ({
   isOpen,
   onClose,
+  onSuccess,
   availableBalance = 1200,
 }) => {
   const [country, setCountry] = useState('Indonesia');
@@ -43,7 +45,10 @@ export const RemitModal: React.FC<RemitModalProps> = ({
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      toast.success(`Remittance of ${receivedAmount} ${currentCountry.currency} to ${receiver} queued successfully!`);
+      toast.success(
+        `Remittance of MYR ${amount.toFixed(2)} (${currentCountry.currency} ${receivedAmount}) sent to ${receiver}!`
+      );
+      onSuccess?.();
       onClose();
     }, 1200);
   };

@@ -12,7 +12,7 @@ import {
   RotateCw,
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
-import { Game, GameCategory, GamingWallet, Wallet } from '../../types';
+import type { Game, GameCategory, GamingWallet, Wallet } from '../../types';
 import { GamingTopUpModal } from '../../components/modals/GamingTopUpModal';
 import { GamingCashOutModal } from '../../components/modals/GamingCashOutModal';
 import { GameLaunchModal } from '../../components/modals/GameLaunchModal';

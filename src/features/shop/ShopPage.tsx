@@ -11,7 +11,7 @@ import {
   Wallet as WalletIcon,
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
-import { Product, CartItem, Order, Wallet } from '../../types';
+import type { Product, CartItem, Order, Wallet } from '../../types';
 import { CartDrawer } from './CartDrawer';
 import { toast } from 'sonner';
 
