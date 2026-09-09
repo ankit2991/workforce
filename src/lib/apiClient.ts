@@ -842,16 +842,126 @@ async function fallbackLocalHandler(endpoint: string, options: RequestInit = {})
     };
   }
 
-  if (endpoint === '/auth/me') {
+  if (endpoint === '/admin/employees') {
+    return [
+      {
+        id: 'emp-001',
+        employeeCode: 'EMP001',
+        name: 'John Doe',
+        department: 'Logistics & Operations',
+        designation: 'Senior Warehouse Specialist',
+        monthlySalary: 1500.0,
+        walletBalance: localStore.wallet.availableBalance,
+        status: 'ACTIVE',
+      },
+      {
+        id: 'emp-002',
+        employeeCode: 'EMP002',
+        name: 'Ahmad Faiz',
+        department: 'Warehouse & Inventory',
+        designation: 'Inventory Coordinator',
+        monthlySalary: 1400.0,
+        walletBalance: 850.0,
+        status: 'ACTIVE',
+      },
+      {
+        id: 'emp-003',
+        employeeCode: 'EMP003',
+        name: 'Priya Sharma',
+        department: 'Supply Chain & Procurement',
+        designation: 'Supply Chain Lead',
+        monthlySalary: 2100.0,
+        walletBalance: 1450.0,
+        status: 'ACTIVE',
+      },
+      {
+        id: 'emp-004',
+        employeeCode: 'EMP004',
+        name: 'Sarah Wong',
+        department: 'Quality Assurance',
+        designation: 'Senior QA Inspector',
+        monthlySalary: 1650.0,
+        walletBalance: 620.0,
+        status: 'ACTIVE',
+      },
+      {
+        id: 'emp-005',
+        employeeCode: 'EMP005',
+        name: 'Michael Chen',
+        department: 'Transport & Fleet',
+        designation: 'Fleet Logistics Supervisor',
+        monthlySalary: 1800.0,
+        walletBalance: 1100.0,
+        status: 'ACTIVE',
+      },
+      {
+        id: 'emp-006',
+        employeeCode: 'EMP006',
+        name: 'Siti Aminah',
+        department: 'Fulfilment & Packing',
+        designation: 'Fulfilment Specialist',
+        monthlySalary: 1350.0,
+        walletBalance: 420.0,
+        status: 'ACTIVE',
+      },
+    ];
+  }
+
+  if (endpoint === '/admin/credit-wallet' && options.method === 'POST') {
+    const amount = Number(body.amount || 0);
+    const code = body.employeeCode || 'EMP001';
+    const reason = body.reason || 'Admin Adjustment';
+
+    if (code === 'EMP001') {
+      localStore.wallet.availableBalance += amount;
+      localStore.wallet.totalEarned += amount;
+
+      const ref = `CRD-${Date.now().toString(36).toUpperCase()}`;
+      localStore.transactions.unshift({
+        id: `tx-${Date.now()}`,
+        referenceNumber: ref,
+        type: 'SALARY_CREDIT',
+        amount,
+        balanceBefore: localStore.wallet.availableBalance - amount,
+        balanceAfter: localStore.wallet.availableBalance,
+        status: 'COMPLETED',
+        description: `Stipend / Bonus (${reason})`,
+        createdAt: new Date().toISOString(),
+      });
+
+      localStore.notifications.unshift({
+        id: `n-${Date.now()}`,
+        title: 'Wallet Credited',
+        message: `Your wallet was credited with MYR ${amount.toFixed(2)}. Reason: ${reason}`,
+        type: 'SUCCESS',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      localStore.save();
+    }
+
     return {
-      id: 'usr-001',
-      mobile: '+60123456789',
-      email: 'john.doe@workforce.com',
-      role: 'EMPLOYEE',
-      employee: initialEmployee,
-      wallet: localStore.wallet,
-      gamingWallet: localStore.gamingWallet,
+      success: true,
+      message: `Credited MYR ${amount.toFixed(2)} to ${code}`,
     };
+  }
+
+  if (endpoint === '/admin/broadcast' && options.method === 'POST') {
+    const title = body.title || 'Broadcast Announcement';
+    const message = body.message || '';
+
+    localStore.notifications.unshift({
+      id: `n-${Date.now()}`,
+      title,
+      message,
+      type: 'PROMO',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+    localStore.save();
+
+    return { success: true, message: 'Broadcast pushed successfully' };
   }
 
   return null;

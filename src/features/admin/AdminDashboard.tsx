@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -15,17 +15,112 @@ import {
   Shield,
   Send,
   Building,
+  ChevronDown,
+  UserCheck,
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 import { toast } from 'sonner';
 
+interface EmployeeOption {
+  id: string;
+  employeeCode: string;
+  name: string;
+  department: string;
+  designation: string;
+  monthlySalary: number;
+  walletBalance: number;
+  status: string;
+}
+
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
 
-  // Demo employee wallet credit state
+  // Employee roster state
+  const [employees, setEmployees] = useState<EmployeeOption[]>([
+    {
+      id: 'emp-001',
+      employeeCode: 'EMP001',
+      name: 'John Doe',
+      department: 'Logistics & Operations',
+      designation: 'Senior Warehouse Specialist',
+      monthlySalary: 1500.0,
+      walletBalance: 1200.0,
+      status: 'ACTIVE',
+    },
+    {
+      id: 'emp-002',
+      employeeCode: 'EMP002',
+      name: 'Ahmad Faiz',
+      department: 'Warehouse & Inventory',
+      designation: 'Inventory Coordinator',
+      monthlySalary: 1400.0,
+      walletBalance: 850.0,
+      status: 'ACTIVE',
+    },
+    {
+      id: 'emp-003',
+      employeeCode: 'EMP003',
+      name: 'Priya Sharma',
+      department: 'Supply Chain & Procurement',
+      designation: 'Supply Chain Lead',
+      monthlySalary: 2100.0,
+      walletBalance: 1450.0,
+      status: 'ACTIVE',
+    },
+    {
+      id: 'emp-004',
+      employeeCode: 'EMP004',
+      name: 'Sarah Wong',
+      department: 'Quality Assurance',
+      designation: 'Senior QA Inspector',
+      monthlySalary: 1650.0,
+      walletBalance: 620.0,
+      status: 'ACTIVE',
+    },
+    {
+      id: 'emp-005',
+      employeeCode: 'EMP005',
+      name: 'Michael Chen',
+      department: 'Transport & Fleet',
+      designation: 'Fleet Logistics Supervisor',
+      monthlySalary: 1800.0,
+      walletBalance: 1100.0,
+      status: 'ACTIVE',
+    },
+    {
+      id: 'emp-006',
+      employeeCode: 'EMP006',
+      name: 'Siti Aminah',
+      department: 'Fulfilment & Packing',
+      designation: 'Fulfilment Specialist',
+      monthlySalary: 1350.0,
+      walletBalance: 420.0,
+      status: 'ACTIVE',
+    },
+  ]);
+  const [selectedEmpCode, setSelectedEmpCode] = useState<string>('EMP001');
+
+  // Employee wallet credit state
   const [creditEmpAmount, setCreditEmpAmount] = useState<number>(200);
   const [creditReason, setCreditReason] = useState('Monthly Overtime Bonus');
   const [isCrediting, setIsCrediting] = useState(false);
+
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const res: any = await apiRequest('/admin/employees');
+        if (res && Array.isArray(res) && res.length > 0) {
+          setEmployees(res);
+        }
+      } catch (err) {
+        // Fallback already preloaded
+      }
+    };
+    loadEmployees();
+  }, []);
+
+  const selectedEmployee =
+    employees.find((e) => e.employeeCode === selectedEmpCode) || employees[0];
 
   // Broadcast state
   const [broadcastTitle, setBroadcastTitle] = useState('Company Bonus Disbursed');
@@ -70,19 +165,34 @@ export const AdminDashboard: React.FC = () => {
 
   const handleCreditWallet = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (creditEmpAmount <= 0) return;
+    if (creditEmpAmount <= 0) {
+      toast.error('Please enter a valid credit amount');
+      return;
+    }
 
     setIsCrediting(true);
     try {
       await apiRequest('/admin/credit-wallet', {
         method: 'POST',
         body: JSON.stringify({
-          employeeCode: 'EMP001',
+          employeeCode: selectedEmployee.employeeCode,
           amount: creditEmpAmount,
           reason: creditReason,
         }),
       });
-      toast.success(`Successfully credited MYR ${creditEmpAmount.toFixed(2)} to EMP001!`);
+
+      // Update local state for the credited employee
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          emp.employeeCode === selectedEmployee.employeeCode
+            ? { ...emp, walletBalance: emp.walletBalance + creditEmpAmount }
+            : emp
+        )
+      );
+
+      toast.success(
+        `Successfully credited MYR ${creditEmpAmount.toFixed(2)} to ${selectedEmployee.employeeCode} (${selectedEmployee.name})!`
+      );
     } catch (err: any) {
       toast.error('Credit failed');
     } finally {
@@ -216,17 +326,68 @@ export const AdminDashboard: React.FC = () => {
             Credit salary advances, performance bonuses, or overtime stipends instantly into an employee's wallet.
           </p>
 
-          <form onSubmit={handleCreditWallet} className="space-y-3 pt-2">
+          <form onSubmit={handleCreditWallet} className="space-y-4 pt-2">
             <div>
-              <label className="block text-xs font-semibold text-[#8493A1] mb-1">
-                Target Employee
-              </label>
-              <input
-                type="text"
-                disabled
-                value="EMP001 - John Doe (Senior Specialist)"
-                className="w-full bg-[#0B141C] border border-[#172631] rounded-xl py-2.5 px-3.5 text-xs text-[#F5F8FA]"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-[#8493A1]">
+                  Target Employee
+                </label>
+                <span className="text-[11px] text-[#1687FF] font-semibold flex items-center gap-1">
+                  <UserCheck size={13} /> {employees.length} Employees Enrolled
+                </span>
+              </div>
+
+              <div className="relative">
+                <select
+                  value={selectedEmpCode}
+                  onChange={(e) => setSelectedEmpCode(e.target.value)}
+                  className="w-full bg-[#0B141C] border border-[#172631] hover:border-[#1687FF]/50 focus:border-[#00C982] rounded-xl py-3 px-3.5 text-xs font-bold text-white outline-none cursor-pointer appearance-none transition-all pr-10 shadow-sm"
+                >
+                  {employees.map((emp) => (
+                    <option
+                      key={emp.employeeCode}
+                      value={emp.employeeCode}
+                      className="bg-[#0B141C] text-white py-2"
+                    >
+                      {emp.employeeCode} - {emp.name} ({emp.designation}) • Wallet: MYR {emp.walletBalance.toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#8493A1]">
+                  <ChevronDown size={16} />
+                </div>
+              </div>
+
+              {/* Selected Employee Live Info Card */}
+              {selectedEmployee && (
+                <div className="mt-2.5 p-3 rounded-xl bg-[#0B141C] border border-white/[0.06] flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#1687FF] to-[#00C982] flex items-center justify-center text-xs font-black text-white shadow-sm">
+                      {selectedEmployee.name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                        {selectedEmployee.name}
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-white/80 font-mono">
+                          {selectedEmployee.employeeCode}
+                        </span>
+                      </p>
+                      <p className="text-[10px] text-[#8493A1]">
+                        {selectedEmployee.department} • {selectedEmployee.designation}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-[#8493A1] block">Current Balance</span>
+                    <span className="text-xs font-black text-[#00C982]">
+                      MYR {selectedEmployee.walletBalance.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -236,6 +397,7 @@ export const AdminDashboard: React.FC = () => {
               <input
                 type="number"
                 step="10"
+                min="1"
                 value={creditEmpAmount}
                 onChange={(e) => setCreditEmpAmount(parseFloat(e.target.value) || 0)}
                 className="w-full bg-[#0B141C] border border-[#172631] focus:border-[#00C982] rounded-xl py-2.5 px-3.5 text-sm font-bold text-white outline-none"
@@ -250,6 +412,7 @@ export const AdminDashboard: React.FC = () => {
                 type="text"
                 value={creditReason}
                 onChange={(e) => setCreditReason(e.target.value)}
+                placeholder="e.g. Overtime Stipend / Performance Bonus"
                 className="w-full bg-[#0B141C] border border-[#172631] focus:border-[#00C982] rounded-xl py-2.5 px-3.5 text-xs text-[#F5F8FA] outline-none"
               />
             </div>
@@ -257,9 +420,12 @@ export const AdminDashboard: React.FC = () => {
             <button
               type="submit"
               disabled={isCrediting || creditEmpAmount <= 0}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00C982] to-[#00E599] text-black font-bold text-xs shadow hover:opacity-95 active:scale-[0.98] transition disabled:opacity-40"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00C982] to-[#00E599] text-black font-extrabold text-xs shadow-lg hover:brightness-105 active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
             >
-              {isCrediting ? 'Crediting Wallet...' : `Disburse MYR ${creditEmpAmount.toFixed(2)} to EMP001`}
+              <DollarSign size={15} />
+              {isCrediting
+                ? 'Crediting Wallet...'
+                : `Disburse MYR ${creditEmpAmount.toFixed(2)} to ${selectedEmployee.employeeCode} (${selectedEmployee.name})`}
             </button>
           </form>
         </div>
