@@ -24,7 +24,7 @@ import {
   Package,
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
-import { Game, Product, User } from '../../types';
+import type { Game, Product, User } from '../../types';
 import { toast } from 'sonner';
 
 export const AdminLayout: React.FC = () => {
