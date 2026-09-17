@@ -17,6 +17,7 @@ export const GamingTopUpModal: React.FC<GamingTopUpModalProps> = ({
   mainWalletBalance = 1200,
 }) => {
   const [amount, setAmount] = useState<number>(50);
+  const [source, setSource] = useState<'main_wallet' | 'razorpay'>('main_wallet');
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -25,18 +26,36 @@ export const GamingTopUpModal: React.FC<GamingTopUpModalProps> = ({
 
   const handleTopUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (amount <= 0 || amount > mainWalletBalance) {
+    if (amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    if (source === 'main_wallet' && amount > mainWalletBalance) {
       toast.error(`Invalid amount (Available in Main Wallet: MYR ${mainWalletBalance.toFixed(2)})`);
       return;
     }
 
     setLoading(true);
     try {
-      await apiRequest('/gaming-wallet/top-up', {
-        method: 'POST',
-        body: JSON.stringify({ amount, source: 'main_wallet' }),
-      });
-      toast.success(`MYR ${amount.toFixed(2)} transferred to Gaming Wallet!`);
+      if (source === 'razorpay') {
+        // Direct Razorpay gateway deposit
+        await apiRequest('/wallet/add-money', {
+          method: 'POST',
+          body: JSON.stringify({ amount, paymentMethod: 'RAZORPAY_GAMING' }),
+        });
+        await apiRequest('/gaming-wallet/top-up', {
+          method: 'POST',
+          body: JSON.stringify({ amount, source: 'razorpay' }),
+        });
+        toast.success(`MYR ${amount.toFixed(2)} added to Gaming Wallet via Razorpay!`);
+      } else {
+        await apiRequest('/gaming-wallet/top-up', {
+          method: 'POST',
+          body: JSON.stringify({ amount, source: 'main_wallet' }),
+        });
+        toast.success(`MYR ${amount.toFixed(2)} transferred from Main Wallet!`);
+      }
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -57,7 +76,7 @@ export const GamingTopUpModal: React.FC<GamingTopUpModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold text-[#F5F8FA]">Top Up Gaming Wallet</h3>
-              <p className="text-xs text-[#8493A1]">Instant transfer from Main Wallet</p>
+              <p className="text-xs text-[#8493A1]">Load chips instantly to play</p>
             </div>
           </div>
           <button
@@ -74,19 +93,42 @@ export const GamingTopUpModal: React.FC<GamingTopUpModalProps> = ({
             <label className="block text-xs font-medium text-[#8493A1] mb-2">
               Payment Source
             </label>
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#101B24] border border-[#1687FF]/50 ring-1 ring-[#1687FF]/30">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#1687FF]/20 flex items-center justify-center text-[#1687FF]">
-                  <Wallet size={16} />
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setSource('main_wallet')}
+                className={`p-3 rounded-xl text-left border transition-all ${
+                  source === 'main_wallet'
+                    ? 'bg-[#101B24] border-[#1687FF] ring-1 ring-[#1687FF]/40'
+                    : 'bg-[#101B24]/60 border-[#172631] hover:border-white/10'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <Wallet size={16} className={source === 'main_wallet' ? 'text-[#1687FF]' : 'text-[#8493A1]'} />
+                  {source === 'main_wallet' && <CheckCircle2 size={14} className="text-[#1687FF]" />}
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-[#F5F8FA]">Main Wallet</p>
-                  <p className="text-[10px] text-[#00C982] font-semibold">
-                    Available: MYR {mainWalletBalance.toFixed(2)}
-                  </p>
+                <p className="text-xs font-bold text-white">Main Wallet</p>
+                <p className="text-[10px] text-[#00C982]">MYR {mainWalletBalance.toFixed(2)}</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSource('razorpay')}
+                className={`p-3 rounded-xl text-left border transition-all ${
+                  source === 'razorpay'
+                    ? 'bg-[#101B24] border-[#3395FF] ring-1 ring-[#3395FF]/40'
+                    : 'bg-[#101B24]/60 border-[#172631] hover:border-white/10'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="px-1.5 py-0.5 rounded bg-[#0C2340] border border-[#3395FF]/30 text-[9px] font-black text-[#3395FF]">
+                    RZP
+                  </div>
+                  {source === 'razorpay' && <CheckCircle2 size={14} className="text-[#3395FF]" />}
                 </div>
-              </div>
-              <CheckCircle2 size={18} className="text-[#1687FF]" />
+                <p className="text-xs font-bold text-white">Razorpay</p>
+                <p className="text-[10px] text-[#3395FF]">UPI / NetBanking</p>
+              </button>
             </div>
           </div>
 
@@ -100,7 +142,7 @@ export const GamingTopUpModal: React.FC<GamingTopUpModalProps> = ({
               <input
                 type="number"
                 min="5"
-                max={mainWalletBalance}
+                max={source === 'main_wallet' ? mainWalletBalance : 10000}
                 step="5"
                 value={amount || ''}
                 onChange={(e) => setAmount(Number(e.target.value))}
@@ -132,10 +174,14 @@ export const GamingTopUpModal: React.FC<GamingTopUpModalProps> = ({
           {/* Action Button */}
           <button
             type="submit"
-            disabled={loading || mainWalletBalance < amount}
+            disabled={loading || (source === 'main_wallet' && mainWalletBalance < amount)}
             className="w-full h-12 rounded-xl bg-gradient-to-r from-[#7B22FF] to-[#A83DF4] hover:opacity-90 font-bold text-sm text-white shadow-lg shadow-[#7B22FF]/30 active:scale-[0.98] transition-all disabled:opacity-50 mt-2"
           >
-            {loading ? 'Processing Top Up...' : `Continue • Top Up MYR ${amount.toFixed(2)}`}
+            {loading
+              ? 'Processing Top Up...'
+              : source === 'razorpay'
+              ? `Pay MYR ${amount.toFixed(2)} via Razorpay`
+              : `Continue • Top Up MYR ${amount.toFixed(2)}`}
           </button>
         </form>
       </div>

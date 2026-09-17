@@ -82,3 +82,55 @@ export const getProductBySlug = async (req: Request, res: Response) => {
     isFeatured: product.isFeatured,
   });
 };
+
+export const createProduct = async (req: Request, res: Response) => {
+  const { name, description, shortDescription, image, price, points, stock, categorySlug, isFeatured } = req.body;
+  if (!name || !price) return sendError(res, 'Product name and price are required', 'VALIDATION_ERROR', 400);
+
+  const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;
+  let category = await prisma.productCategory.findFirst({
+    where: { slug: categorySlug || 'vouchers' },
+  });
+  if (!category) {
+    category = await prisma.productCategory.findFirst();
+  }
+
+  const newProd = await prisma.product.create({
+    data: {
+      name,
+      slug,
+      description: description || 'Premium workforce catalog merchandise',
+      shortDescription: shortDescription || name,
+      image: image || 'https://images.unsplash.com/photo-1526367790999-0150786686a2?w=400',
+      price: Number(price),
+      points: Number(points) || 0,
+      stock: Number(stock) || 100,
+      categoryId: category!.id,
+      isFeatured: isFeatured ?? false,
+      isActive: true,
+    },
+    include: { category: true },
+  });
+
+  return sendSuccess(res, {
+    id: newProd.id,
+    name: newProd.name,
+    slug: newProd.slug,
+    description: newProd.description,
+    shortDescription: newProd.shortDescription,
+    image: newProd.image,
+    price: Number(newProd.price),
+    points: newProd.points || 0,
+    stock: newProd.stock,
+    category: newProd.category.name,
+    categorySlug: newProd.category.slug,
+    isFeatured: newProd.isFeatured,
+  }, 'Product created successfully', 201);
+};
+
+export const deleteProduct = async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  await prisma.product.delete({ where: { id } });
+  return sendSuccess(res, null, 'Product deleted successfully');
+};
+

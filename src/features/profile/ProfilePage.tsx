@@ -12,7 +12,6 @@ import {
   Mail,
   Calendar,
   Lock,
-  LayoutDashboard,
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
@@ -129,27 +128,6 @@ export const ProfilePage: React.FC = () => {
           <span className="px-2 py-0.5 rounded-md bg-[#00C982]/15 text-[#00C982] text-[10px] font-bold">
             Primary
           </span>
-        </div>
-      </div>
-
-      {/* Admin Quick Switcher */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-[#101B24] via-[#142331] to-[#101B24] border border-[#1687FF]/30 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#1687FF]/20 text-[#1687FF] flex items-center justify-center">
-              <LayoutDashboard size={18} />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white">HR & Payroll Admin Panel</h4>
-              <p className="text-[10px] text-[#8493A1]">Credit wallet, approve advances & stats</p>
-            </div>
-          </div>
-          <button
-            onClick={() => navigate('/admin')}
-            className="px-3 py-1.5 rounded-xl bg-[#1687FF] hover:bg-[#389AFF] text-white font-bold text-xs shadow transition flex items-center gap-1"
-          >
-            Open <ChevronRight size={14} />
-          </button>
         </div>
       </div>
 

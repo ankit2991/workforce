@@ -20,12 +20,14 @@ import {
   Share2,
   ArrowRight,
   ShieldCheck,
+  Plus,
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 import type { Wallet, WalletTransaction, BannerItem } from '../../types';
 import { SalaryAdvanceModal } from '../../components/modals/SalaryAdvanceModal';
 import { WithdrawalModal } from '../../components/modals/WithdrawalModal';
 import { RemitModal } from '../../components/modals/RemitModal';
+import { AddMoneyModal } from '../../components/modals/AddMoneyModal';
 import { useNavigate } from 'react-router-dom';
 
 export const HomePage: React.FC = () => {
@@ -38,6 +40,7 @@ export const HomePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Modals state
+  const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [showRemitModal, setShowRemitModal] = useState(false);
@@ -179,7 +182,7 @@ export const HomePage: React.FC = () => {
         </div>
 
         {/* Large Balance Display */}
-        <div className="mt-2.5 relative z-10">
+        <div className="mt-2.5 relative z-10 flex items-center justify-between">
           <div className="flex items-baseline gap-1.5">
             <span className="text-xl font-extrabold text-blue-300/90">RM</span>
             <span className="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow-sm">
@@ -191,6 +194,13 @@ export const HomePage: React.FC = () => {
                 : '••••••••'}
             </span>
           </div>
+
+          <button
+            onClick={() => setShowAddMoneyModal(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0C2340] to-[#1859B4] hover:from-[#1859B4] hover:to-[#3395FF] border border-[#3395FF]/40 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-[#3395FF]/20 active:scale-95 transition"
+          >
+            <Plus size={14} className="text-[#3395FF]" /> Add Money
+          </button>
         </div>
 
         {/* Instant Advance Micro-Banner (Inside Hero Card) */}
@@ -480,6 +490,12 @@ export const HomePage: React.FC = () => {
         onClose={() => setShowRemitModal(false)}
         onSuccess={fetchDashboard}
         availableBalance={wallet?.availableBalance ?? 1200}
+      />
+      <AddMoneyModal
+        isOpen={showAddMoneyModal}
+        onClose={() => setShowAddMoneyModal(false)}
+        onSuccess={fetchDashboard}
+        currentBalance={wallet?.availableBalance ?? 1200}
       />
     </div>
   );

@@ -8,7 +8,16 @@ import { ShopPage } from "./features/shop/ShopPage";
 import { NotificationsPage } from "./features/notifications/NotificationsPage";
 import { ProfilePage } from "./features/profile/ProfilePage";
 import { LoginPage } from "./features/auth/LoginPage";
-import { AdminDashboard } from "./features/admin/AdminDashboard";
+import { AdminLogin } from "./features/admin/AdminLogin";
+import { AdminLayout } from "./features/admin/AdminLayout";
+
+function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
+  const token = localStorage.getItem('workpay_admin_token');
+  if (!token) {
+    return <Navigate to="/admin/login" replace />;
+  }
+  return <>{children}</>;
+}
 
 export default function App() {
   useServiceWorker();
@@ -17,11 +26,27 @@ export default function App() {
     <DefaultProviders>
       <BrowserRouter>
         <Routes>
-          {/* Auth Route */}
+          {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* HR & Payroll Admin Console (Desktop Responsive) */}
-          <Route path="/admin" element={<AdminDashboard />} />
+          {/* Secure Admin Console (Fixed Header & Sidebar) */}
+          <Route
+            path="/admin/*"
+            element={
+              <AdminProtectedRoute>
+                <AdminLayout />
+              </AdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <AdminProtectedRoute>
+                <AdminLayout />
+              </AdminProtectedRoute>
+            }
+          />
 
           {/* Core Mobile Workforce App Routes */}
           <Route

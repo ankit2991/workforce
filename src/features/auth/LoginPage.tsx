@@ -152,27 +152,18 @@ export const LoginPage: React.FC = () => {
             </form>
           )}
 
-          {/* Quick Demo Shortcuts */}
+          {/* Quick Demo Shortcut */}
           <div className="pt-4 border-t border-[#172631] space-y-2">
             <span className="block text-center text-[10px] uppercase font-bold text-[#8493A1]">
               Or 1-Click Instant Demo Login
             </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => quickLoginAs('EMPLOYEE')}
-                className="py-2.5 px-2 rounded-xl bg-[#0B141C] border border-[#172631] text-xs font-bold text-white hover:border-[#1687FF]/50 transition"
-              >
-                👤 Employee
-              </button>
-              <button
-                type="button"
-                onClick={() => quickLoginAs('ADMIN')}
-                className="py-2.5 px-2 rounded-xl bg-[#0B141C] border border-[#172631] text-xs font-bold text-white hover:border-[#7B22FF]/50 transition"
-              >
-                🛡️ HR Admin
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => quickLoginAs('EMPLOYEE')}
+              className="w-full py-2.5 px-3 rounded-xl bg-[#0B141C] border border-[#172631] text-xs font-bold text-white hover:border-[#1687FF]/50 transition flex items-center justify-center gap-2"
+            >
+              👤 Employee (John Doe - EMP001)
+            </button>
           </div>
         </div>
       </div>

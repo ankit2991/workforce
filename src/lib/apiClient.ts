@@ -134,168 +134,91 @@ const initialTransactions: WalletTransaction[] = [
 
 const initialGameCategories: GameCategory[] = [
   { id: 'cat-1', name: 'All Games', slug: 'all', icon: 'Sparkles', sortOrder: 0 },
-  { id: 'cat-2', name: 'Slots', slug: 'slots', icon: 'Flame', sortOrder: 1 },
-  { id: 'cat-3', name: 'Crash', slug: 'crash', icon: 'Rocket', sortOrder: 2 },
-  { id: 'cat-4', name: 'Live Casino', slug: 'live-casino', icon: 'Tv', sortOrder: 3 },
-  { id: 'cat-5', name: 'Arcade', slug: 'arcade', icon: 'Gamepad2', sortOrder: 4 },
-  { id: 'cat-6', name: 'Other', slug: 'other', icon: 'Dice5', sortOrder: 5 },
+  { id: 'cat-2', name: 'Arcade', slug: 'arcade', icon: 'Gamepad2', sortOrder: 1 },
+  { id: 'cat-3', name: 'Action', slug: 'action', icon: 'Flame', sortOrder: 2 },
+  { id: 'cat-4', name: 'Table Games', slug: 'table-games', icon: 'Tv', sortOrder: 3 },
+  { id: 'cat-5', name: 'Dice', slug: 'dice', icon: 'Dice5', sortOrder: 4 },
 ];
 
 const initialGames: Game[] = [
   {
-    id: 'g-1',
-    name: 'Candy Fortune',
-    slug: 'candy-fortune',
-    category: 'Slots',
-    categorySlug: 'slots',
-    provider: 'SweetWorks Games',
-    thumbnail: 'https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?w=400',
-    status: 'HOT',
+    id: 'g-pinball',
+    name: 'Space Pinball',
+    slug: 'space-pinball',
+    category: 'Arcade',
+    categorySlug: 'arcade',
+    provider: 'Pinball Retro Lab',
+    thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600',
+    banner: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800',
+    gameUrl: 'https://pinballfe.vercel.app',
     minBet: 1.0,
     maxBet: 500.0,
+    status: 'HOT',
+    tag: 'HOT',
     isFeatured: true,
   },
   {
-    id: 'g-2',
-    name: 'Olympus Quest',
-    slug: 'olympus-quest',
-    category: 'Slots',
-    categorySlug: 'slots',
-    provider: 'Mythic Play',
-    thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400',
+    id: 'g-galaga',
+    name: 'Galaga Retro Space',
+    slug: 'galaga-retro-space',
+    category: 'Arcade',
+    categorySlug: 'arcade',
+    provider: 'Bandai Classic Arcade',
+    thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600',
+    banner: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800',
+    gameUrl: 'https://galaga-fe.vercel.app',
+    minBet: 1.0,
+    maxBet: 500.0,
     status: 'POPULAR',
+    tag: 'POPULAR',
+    isFeatured: true,
+  },
+  {
+    id: 'g-bomberboy',
+    name: 'Bomber Boy',
+    slug: 'bomber-boy',
+    category: 'Action',
+    categorySlug: 'action',
+    provider: 'Bomber Studio',
+    thumbnail: 'https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?w=600',
+    banner: 'https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?w=800',
+    gameUrl: 'https://bomberboy-game.vercel.app/',
     minBet: 2.0,
     maxBet: 800.0,
-    isFeatured: true,
-  },
-  {
-    id: 'g-3',
-    name: 'Sky Aviator',
-    slug: 'sky-aviator',
-    category: 'Crash',
-    categorySlug: 'crash',
-    provider: 'Velocity Tech',
-    thumbnail: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=400',
     status: 'HOT',
-    minBet: 1.0,
-    maxBet: 1000.0,
+    tag: 'HOT',
     isFeatured: true,
   },
   {
-    id: 'g-4',
-    name: 'Royal Baccarat',
-    slug: 'royal-baccarat',
-    category: 'Live Casino',
-    categorySlug: 'live-casino',
-    provider: 'Grand Studios',
-    thumbnail: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?w=400',
-    status: 'DEFAULT',
+    id: 'g-liarsdice',
+    name: "Liar's Dice",
+    slug: 'liars-dice',
+    category: 'Table Games',
+    categorySlug: 'table-games',
+    provider: 'Dice Master Gaming',
+    thumbnail: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600',
+    banner: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=800',
+    gameUrl: 'https://lair-s-daice.vercel.app/',
     minBet: 5.0,
-    maxBet: 2000.0,
-    isFeatured: false,
-  },
-  {
-    id: 'g-5',
-    name: 'Lucky Roulette',
-    slug: 'lucky-roulette',
-    category: 'Live Casino',
-    categorySlug: 'live-casino',
-    provider: 'Spin Palace Live',
-    thumbnail: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400',
-    status: 'POPULAR',
-    minBet: 2.0,
-    maxBet: 1500.0,
-    isFeatured: true,
-  },
-  {
-    id: 'g-6',
-    name: 'Night Blackjack',
-    slug: 'night-blackjack',
-    category: 'Live Casino',
-    categorySlug: 'live-casino',
-    provider: 'Club Noir',
-    thumbnail: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=400',
-    status: 'NEW',
-    minBet: 10.0,
-    maxBet: 3000.0,
-    isFeatured: false,
-  },
-  {
-    id: 'g-7',
-    name: 'Dragon Fortune',
-    slug: 'dragon-fortune',
-    category: 'Slots',
-    categorySlug: 'slots',
-    provider: 'Eastern Fortune',
-    thumbnail: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=400',
-    status: 'HOT',
-    minBet: 1.0,
-    maxBet: 600.0,
-    isFeatured: true,
-  },
-  {
-    id: 'g-8',
-    name: 'Book of Gold',
-    slug: 'book-of-gold',
-    category: 'Slots',
-    categorySlug: 'slots',
-    provider: 'Pharaoh Gaming',
-    thumbnail: 'https://images.unsplash.com/photo-1533158307587-828f0a76ef96?w=400',
-    status: 'POPULAR',
-    minBet: 1.0,
-    maxBet: 500.0,
-    isFeatured: false,
-  },
-  {
-    id: 'g-9',
-    name: 'Big Bass Adventure',
-    slug: 'big-bass-adventure',
-    category: 'Slots',
-    categorySlug: 'slots',
-    provider: 'Reel Wild',
-    thumbnail: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400',
-    status: 'DEFAULT',
-    minBet: 2.0,
-    maxBet: 700.0,
-    isFeatured: false,
-  },
-  {
-    id: 'g-10',
-    name: 'Lucky Cat',
-    slug: 'lucky-cat',
-    category: 'Arcade',
-    categorySlug: 'arcade',
-    provider: 'Neko Arcade',
-    thumbnail: 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=400',
-    status: 'NEW',
-    minBet: 0.5,
-    maxBet: 200.0,
-    isFeatured: false,
-  },
-  {
-    id: 'g-11',
-    name: 'Mines',
-    slug: 'mines',
-    category: 'Arcade',
-    categorySlug: 'arcade',
-    provider: 'Grid Logic',
-    thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400',
-    status: 'HOT',
-    minBet: 1.0,
     maxBet: 1000.0,
+    status: 'NEW',
+    tag: 'NEW',
     isFeatured: true,
   },
   {
-    id: 'g-12',
-    name: 'Plinko',
-    slug: 'plinko',
-    category: 'Arcade',
-    categorySlug: 'arcade',
-    provider: 'Drop Zone Games',
-    thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400',
-    status: 'POPULAR',
-    minBet: 1.0,
-    maxBet: 500.0,
+    id: 'g-shipcaptaincrew',
+    name: 'Ship, Captain & Crew',
+    slug: 'ship-captain-crew',
+    category: 'Dice',
+    categorySlug: 'dice',
+    provider: 'Nautical Rollers',
+    thumbnail: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600',
+    banner: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800',
+    gameUrl: 'https://ship-captain-crew-fe.vercel.app/',
+    minBet: 2.0,
+    maxBet: 600.0,
+    status: 'HOT',
+    tag: 'HOT',
     isFeatured: true,
   },
 ];
@@ -505,6 +428,8 @@ class LocalStore {
   transactions: WalletTransaction[];
   notifications: NotificationItem[];
   orders: Order[];
+  games: Game[];
+  products: Product[];
 
   constructor() {
     const savedWallet = localStorage.getItem('workpay_wallet');
@@ -518,6 +443,12 @@ class LocalStore {
 
     const savedNotifs = localStorage.getItem('workpay_notifications');
     this.notifications = savedNotifs ? JSON.parse(savedNotifs) : initialNotifications;
+
+    const savedGames = localStorage.getItem('workpay_games_v4');
+    this.games = savedGames ? JSON.parse(savedGames) : initialGames;
+
+    const savedProducts = localStorage.getItem('workpay_products');
+    this.products = savedProducts ? JSON.parse(savedProducts) : initialProducts;
 
     const savedOrders = localStorage.getItem('workpay_orders');
     this.orders = savedOrders ? JSON.parse(savedOrders) : [
@@ -549,6 +480,8 @@ class LocalStore {
     localStorage.setItem('workpay_transactions', JSON.stringify(this.transactions));
     localStorage.setItem('workpay_notifications', JSON.stringify(this.notifications));
     localStorage.setItem('workpay_orders', JSON.stringify(this.orders));
+    localStorage.setItem('workpay_games_v4', JSON.stringify(this.games));
+    localStorage.setItem('workpay_products', JSON.stringify(this.products));
   }
 }
 
@@ -755,7 +688,34 @@ async function fallbackLocalHandler(endpoint: string, options: RequestInit = {})
   }
 
   if (endpoint === '/games') {
-    return initialGames;
+    if (options.method === 'POST') {
+      const newGame: Game = {
+        id: `g-${Date.now()}`,
+        name: body.name || 'New Game',
+        slug: (body.name || 'game').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        category: body.category || 'Slots',
+        categorySlug: (body.category || 'slots').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        provider: body.provider || 'Casino Studio',
+        thumbnail: body.thumbnail || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400',
+        banner: body.banner || body.thumbnail || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600',
+        minBet: Number(body.minBet) || 1.0,
+        maxBet: Number(body.maxBet) || 500.0,
+        status: (body.status as any) || 'HOT',
+        tag: body.tag || 'HOT',
+        isFeatured: body.isFeatured ?? true,
+      };
+      localStore.games.unshift(newGame);
+      localStore.save();
+      return newGame;
+    }
+    return localStore.games;
+  }
+
+  if (endpoint.startsWith('/games/') && options.method === 'DELETE') {
+    const id = endpoint.replace('/games/', '');
+    localStore.games = localStore.games.filter((g) => g.id !== id);
+    localStore.save();
+    return { success: true, message: 'Game removed successfully' };
   }
 
   if (endpoint === '/game-categories') {
@@ -763,7 +723,33 @@ async function fallbackLocalHandler(endpoint: string, options: RequestInit = {})
   }
 
   if (endpoint === '/products') {
-    return initialProducts;
+    if (options.method === 'POST') {
+      const newProduct: Product = {
+        id: `p-${Date.now()}`,
+        name: body.name || 'New Product',
+        slug: (body.name || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        description: body.description || 'Exclusive employee marketplace item',
+        shortDescription: body.shortDescription || body.name,
+        image: body.image || 'https://images.unsplash.com/photo-1526367790999-0150786686a2?w=400',
+        price: Number(body.price) || 50.0,
+        points: Number(body.points) || 10,
+        stock: Number(body.stock) || 100,
+        category: body.category || 'Vouchers',
+        categorySlug: (body.category || 'vouchers').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        isFeatured: body.isFeatured ?? true,
+      };
+      localStore.products.unshift(newProduct);
+      localStore.save();
+      return newProduct;
+    }
+    return localStore.products;
+  }
+
+  if (endpoint.startsWith('/products/') && options.method === 'DELETE') {
+    const id = endpoint.replace('/products/', '');
+    localStore.products = localStore.products.filter((p) => p.id !== id);
+    localStore.save();
+    return { success: true, message: 'Product removed successfully' };
   }
 
   if (endpoint === '/orders' && options.method === 'POST') {
@@ -772,7 +758,7 @@ async function fallbackLocalHandler(endpoint: string, options: RequestInit = {})
     const orderItems: any[] = [];
 
     for (const item of items) {
-      const prod = initialProducts.find((p) => p.id === item.productId) || initialProducts[0];
+      const prod = localStore.products.find((p) => p.id === item.productId) || localStore.products[0];
       const subtotal = prod.price * item.quantity;
       total += subtotal;
       orderItems.push({
@@ -907,32 +893,76 @@ async function fallbackLocalHandler(endpoint: string, options: RequestInit = {})
     ];
   }
 
+  if (endpoint === '/wallet/add-money' && options.method === 'POST') {
+    const amount = Number(body.amount || 50);
+    const paymentMethod = body.paymentMethod || 'RAZORPAY';
+    localStore.wallet.availableBalance += amount;
+    localStore.wallet.totalEarned += amount;
+
+    const rzpId = `pay_${Math.random().toString(36).substring(2, 11)}`;
+    const ref = `RZP-${Date.now()}`;
+
+    localStore.transactions.unshift({
+      id: `tx-${Date.now()}`,
+      referenceNumber: ref,
+      type: 'RAZORPAY_CREDIT',
+      amount,
+      balanceBefore: localStore.wallet.availableBalance - amount,
+      balanceAfter: localStore.wallet.availableBalance,
+      status: 'COMPLETED',
+      description: `Loaded via Razorpay Gateway (${rzpId})`,
+      createdAt: new Date().toISOString(),
+    });
+
+    localStore.notifications.unshift({
+      id: `n-${Date.now()}`,
+      title: 'Money Added via Razorpay',
+      message: `MYR ${amount.toFixed(2)} loaded successfully via Razorpay Gateway. Payment ID: ${rzpId}`,
+      type: 'SUCCESS',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    localStore.save();
+    return {
+      referenceNumber: ref,
+      razorpayPaymentId: rzpId,
+      amount,
+      newAvailableBalance: localStore.wallet.availableBalance,
+    };
+  }
+
   if (endpoint === '/admin/credit-wallet' && options.method === 'POST') {
     const amount = Number(body.amount || 0);
     const code = body.employeeCode || 'EMP001';
     const reason = body.reason || 'Admin Adjustment';
+    const gateway = body.gateway || 'RAZORPAY';
 
     if (code === 'EMP001') {
       localStore.wallet.availableBalance += amount;
       localStore.wallet.totalEarned += amount;
 
+      const rzpPayoutId = `pout_${Math.random().toString(36).substring(2, 11)}`;
       const ref = `CRD-${Date.now().toString(36).toUpperCase()}`;
+
       localStore.transactions.unshift({
         id: `tx-${Date.now()}`,
         referenceNumber: ref,
-        type: 'SALARY_CREDIT',
+        type: 'RAZORPAY_CREDIT',
         amount,
         balanceBefore: localStore.wallet.availableBalance - amount,
         balanceAfter: localStore.wallet.availableBalance,
         status: 'COMPLETED',
-        description: `Stipend / Bonus (${reason})`,
+        description: gateway === 'RAZORPAY'
+          ? `Disbursed via Razorpay Corporate Payout (${reason} - ${rzpPayoutId})`
+          : `Stipend / Bonus (${reason})`,
         createdAt: new Date().toISOString(),
       });
 
       localStore.notifications.unshift({
         id: `n-${Date.now()}`,
-        title: 'Wallet Credited',
-        message: `Your wallet was credited with MYR ${amount.toFixed(2)}. Reason: ${reason}`,
+        title: gateway === 'RAZORPAY' ? 'Stipend Credited via Razorpay' : 'Wallet Credited',
+        message: `Your wallet was credited with MYR ${amount.toFixed(2)}. Reason: ${reason} (Razorpay Reference: ${rzpPayoutId})`,
         type: 'SUCCESS',
         isRead: false,
         createdAt: new Date().toISOString(),
@@ -943,7 +973,7 @@ async function fallbackLocalHandler(endpoint: string, options: RequestInit = {})
 
     return {
       success: true,
-      message: `Credited MYR ${amount.toFixed(2)} to ${code}`,
+      message: `Credited MYR ${amount.toFixed(2)} to ${code} via Razorpay`,
     };
   }
 

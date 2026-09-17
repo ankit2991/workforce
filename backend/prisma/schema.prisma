@@ -287,6 +287,7 @@ model Game {
   provider   String    @default("WorkPlay Originals")
   thumbnail  String
   banner     String?
+  gameUrl    String?
   minBet     Float     @default(1.0)
   maxBet     Float     @default(500.0)
   status     GameBadge @default(DEFAULT)

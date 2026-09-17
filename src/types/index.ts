@@ -47,7 +47,9 @@ export interface WalletTransaction {
     | 'SHOP_PAYMENT'
     | 'REFUND'
     | 'GAMING_TOPUP'
-    | 'GAMING_CASHOUT';
+    | 'GAMING_CASHOUT'
+    | 'WALLET_TOPUP'
+    | 'RAZORPAY_CREDIT';
   amount: number;
   balanceBefore: number;
   balanceAfter: number;
@@ -73,6 +75,7 @@ export interface Game {
   provider: string;
   thumbnail: string;
   banner?: string;
+  gameUrl?: string;
   minBet: number;
   maxBet: number;
   status: 'HOT' | 'NEW' | 'POPULAR' | 'DEFAULT';
