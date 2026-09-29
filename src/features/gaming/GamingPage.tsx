@@ -11,7 +11,7 @@ import {
   Play,
   RotateCw,
 } from 'lucide-react';
-import { apiRequest } from '../../lib/apiClient';
+import { apiRequest, localStore } from '../../lib/apiClient';
 import type { Game, GameCategory, GamingWallet, Wallet } from '../../types';
 import { GamingTopUpModal } from '../../components/modals/GamingTopUpModal';
 import { GamingCashOutModal } from '../../components/modals/GamingCashOutModal';
@@ -22,6 +22,7 @@ export const GamingPage: React.FC = () => {
   const [mainWallet, setMainWallet] = useState<Wallet | null>(null);
   const [categories, setCategories] = useState<GameCategory[]>([]);
   const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'GAMES' | 'HISTORY'>('GAMES');
@@ -33,6 +34,7 @@ export const GamingPage: React.FC = () => {
   const [selectedGameToPlay, setSelectedGameToPlay] = useState<Game | null>(null);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
       const [gWalletRes, mWalletRes, catsRes, gamesRes]: any = await Promise.all([
         apiRequest('/gaming-wallet'),
@@ -43,10 +45,21 @@ export const GamingPage: React.FC = () => {
 
       if (gWalletRes) setGamingWallet(gWalletRes);
       if (mWalletRes) setMainWallet(mWalletRes);
-      if (catsRes) setCategories(catsRes);
-      if (gamesRes) setGames(gamesRes);
+      if (catsRes && Array.isArray(catsRes) && catsRes.length > 0) {
+        setCategories(catsRes);
+      }
+      if (gamesRes && Array.isArray(gamesRes) && gamesRes.length > 0) {
+        setGames(gamesRes);
+      } else {
+        // Fallback to localStore games if backend returns empty
+        setGames(localStore.games);
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching games data:', err);
+      // Resilience fallback
+      setGames(localStore.games);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -143,7 +156,12 @@ export const GamingPage: React.FC = () => {
               : 'text-[#8493A1] hover:text-[#F5F8FA]'
           }`}
         >
-          <Gamepad2 size={15} /> All Games ({games.length})
+          <Gamepad2 size={15} /> All Games{' '}
+          {loading ? (
+            <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin ml-1" />
+          ) : (
+            `(${games.length})`
+          )}
         </button>
         <button
           onClick={() => setActiveTab('HISTORY')}
@@ -201,54 +219,123 @@ export const GamingPage: React.FC = () => {
             ))}
           </div>
 
-          {/* 2-Column Game Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            {filteredGames.map((game) => (
-              <div
-                key={game.id}
-                className="group rounded-2xl bg-[#101B24] border border-[#172631] hover:border-[#7B22FF]/50 overflow-hidden shadow-md transition flex flex-col justify-between"
-              >
-                {/* Thumbnail Container */}
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#0A131A]">
-                  <img
-                    src={game.thumbnail}
-                    alt={game.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#101B24] via-transparent to-transparent opacity-80" />
-
-                  {/* Status Badge */}
-                  {game.status && (
-                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-[#7B22FF] text-[9px] font-black text-white uppercase tracking-wider flex items-center gap-1 shadow">
-                      <Flame size={10} /> {game.status}
-                    </div>
-                  )}
-
-                  {/* Min Bet Pill */}
-                  <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[9px] font-bold text-[#E0A7FF]">
-                    Min: MYR {game.minBet.toFixed(2)}
+          {/* Loading Skeletons vs Game Grid vs Empty State */}
+          {loading ? (
+            <div className="space-y-4">
+              {/* Premium Gaming Loading Header Card */}
+              <div className="p-4 rounded-2xl bg-[#101B24] border border-[#7B22FF]/30 flex items-center justify-between shadow-lg relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#7B22FF]/10 to-transparent animate-[shimmer_2s_infinite]" />
+                <div className="flex items-center gap-3 relative z-10">
+                  <div className="w-10 h-10 rounded-xl bg-[#7B22FF]/20 border border-[#7B22FF]/50 flex items-center justify-center text-[#E0A7FF]">
+                    <RotateCw size={18} className="animate-spin text-[#A83DF4]" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      Loading Arena Games...
+                      <span className="w-2 h-2 rounded-full bg-[#00C982] animate-ping inline-block" />
+                    </h4>
+                    <p className="text-[10px] text-[#8493A1]">Connecting to game catalog & live providers</p>
                   </div>
                 </div>
-
-                {/* Details & Play Button */}
-                <div className="p-3 flex flex-col justify-between flex-1 gap-2">
-                  <div>
-                    <h4 className="text-xs font-bold text-[#F5F8FA] line-clamp-1 group-hover:text-[#E0A7FF] transition">
-                      {game.name}
-                    </h4>
-                    <p className="text-[10px] text-[#8493A1] mt-0.5">{game.provider}</p>
-                  </div>
-
-                  <button
-                    onClick={() => setSelectedGameToPlay(game)}
-                    className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#7B22FF] to-[#A83DF4] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-[#7B22FF]/20 hover:opacity-95 active:scale-[0.98] transition"
-                  >
-                    <Play size={13} fill="currentColor" /> Play Now
-                  </button>
+                <div className="px-2.5 py-1 rounded-full bg-[#7B22FF]/20 text-[10px] font-bold text-[#E0A7FF] border border-[#7B22FF]/40 relative z-10 animate-pulse">
+                  Loading...
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* 2-Column Skeleton Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {[1, 2, 3, 4, 5, 6].map((idx) => (
+                  <div
+                    key={idx}
+                    className="rounded-2xl bg-[#101B24] border border-[#172631] overflow-hidden shadow-md animate-pulse flex flex-col justify-between"
+                  >
+                    <div className="relative aspect-[4/3] w-full bg-[#0D161F] flex items-center justify-center">
+                      <Gamepad2 size={24} className="text-[#8493A1]/20" />
+                      <div className="absolute top-2 left-2 w-12 h-3.5 rounded-md bg-[#1F3342]/70" />
+                      <div className="absolute bottom-2 left-2 w-16 h-3.5 rounded-md bg-[#1F3342]/70" />
+                    </div>
+                    <div className="p-3 space-y-2.5">
+                      <div className="space-y-1.5">
+                        <div className="h-3 w-3/4 rounded-md bg-[#1F3342]" />
+                        <div className="h-2 w-1/2 rounded-md bg-[#172631]" />
+                      </div>
+                      <div className="h-8 w-full rounded-xl bg-[#7B22FF]/20 border border-[#7B22FF]/30" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : filteredGames.length > 0 ? (
+            /* 2-Column Game Grid */
+            <div className="grid grid-cols-2 gap-3">
+              {filteredGames.map((game) => (
+                <div
+                  key={game.id}
+                  className="group rounded-2xl bg-[#101B24] border border-[#172631] hover:border-[#7B22FF]/50 overflow-hidden shadow-md transition flex flex-col justify-between"
+                >
+                  {/* Thumbnail Container */}
+                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#0A131A]">
+                    <img
+                      src={game.thumbnail}
+                      alt={game.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#101B24] via-transparent to-transparent opacity-80" />
+
+                    {/* Status Badge */}
+                    {game.status && (
+                      <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-[#7B22FF] text-[9px] font-black text-white uppercase tracking-wider flex items-center gap-1 shadow">
+                        <Flame size={10} /> {game.status}
+                      </div>
+                    )}
+
+                    {/* Min Bet Pill */}
+                    <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[9px] font-bold text-[#E0A7FF]">
+                      Min: MYR {game.minBet.toFixed(2)}
+                    </div>
+                  </div>
+
+                  {/* Details & Play Button */}
+                  <div className="p-3 flex flex-col justify-between flex-1 gap-2">
+                    <div>
+                      <h4 className="text-xs font-bold text-[#F5F8FA] line-clamp-1 group-hover:text-[#E0A7FF] transition">
+                        {game.name}
+                      </h4>
+                      <p className="text-[10px] text-[#8493A1] mt-0.5">{game.provider}</p>
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedGameToPlay(game)}
+                      className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#7B22FF] to-[#A83DF4] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-[#7B22FF]/20 hover:opacity-95 active:scale-[0.98] transition"
+                    >
+                      <Play size={13} fill="currentColor" /> Play Now
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Empty State */
+            <div className="p-8 text-center bg-[#101B24] rounded-2xl border border-[#172631] space-y-3">
+              <Gamepad2 size={36} className="mx-auto text-[#8493A1]/40" />
+              <div>
+                <p className="text-sm font-bold text-white">No Games Found</p>
+                <p className="text-xs text-[#8493A1] mt-1">
+                  {searchQuery ? `No games match "${searchQuery}"` : 'No games found in this category.'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedCategory('all');
+                  setSearchQuery('');
+                  setGames(localStore.games);
+                }}
+                className="px-4 py-2 rounded-xl bg-[#7B22FF] text-white text-xs font-bold shadow-md hover:opacity-90 transition"
+              >
+                Reset & View All Games ({localStore.games.length})
+              </button>
+            </div>
+          )}
         </>
       ) : (
         /* Bet History */

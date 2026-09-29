@@ -38,6 +38,17 @@ export const GameLaunchModal: React.FC<GameLaunchModalProps> = ({
   const [lastWin, setLastWin] = useState<number | null>(null);
   const [multiplier, setMultiplier] = useState<number | null>(null);
   const [slotSymbols, setSlotSymbols] = useState<string[]>(['🍒', '💎', '7️⃣']);
+  const [iframeLoading, setIframeLoading] = useState(true);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setIframeLoading(true);
+      const timer = setTimeout(() => {
+        setIframeLoading(false);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, game?.id]);
 
   if (!isOpen || !game) return null;
 
@@ -188,13 +199,44 @@ export const GameLaunchModal: React.FC<GameLaunchModalProps> = ({
         {/* Live Game Iframe Mode */}
         {activeMode === 'LIVE' && game.gameUrl ? (
           <div className="flex-1 p-3 flex flex-col bg-[#050B10] space-y-2">
-            <div className="relative w-full h-[480px] sm:h-[540px] rounded-2xl overflow-hidden border border-[#172631] bg-black">
+            <div className="relative w-full h-[480px] sm:h-[540px] rounded-2xl overflow-hidden border border-[#172631] bg-[#070D14] flex items-center justify-center">
+              {iframeLoading && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#070D14]/95 backdrop-blur-md p-6 text-center animate-in fade-in duration-200">
+                  <div className="relative mb-4">
+                    <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-[#7B22FF] shadow-xl shadow-[#7B22FF]/30 bg-[#101B24]">
+                      <img
+                        src={game.thumbnail}
+                        alt={game.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-[#7B22FF] border-2 border-[#070D14] flex items-center justify-center text-white shadow">
+                      <RotateCcw size={14} className="animate-spin" />
+                    </div>
+                  </div>
+
+                  <h3 className="text-sm font-black text-white tracking-wide mb-1 flex items-center gap-1.5">
+                    Loading {game.name}...
+                  </h3>
+                  <p className="text-[11px] text-[#8493A1] max-w-xs mb-4">
+                    Connecting to game engine & assets. Please wait...
+                  </p>
+
+                  <div className="w-44 h-1.5 bg-[#172631] rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-[#7B22FF] via-[#00C982] to-[#7B22FF] rounded-full animate-pulse w-full" />
+                  </div>
+                </div>
+              )}
+
               <iframe
                 src={game.gameUrl}
                 title={game.name}
-                className="w-full h-full border-0"
+                className={`w-full h-full border-0 transition-opacity duration-300 ${
+                  iframeLoading ? 'opacity-0' : 'opacity-100'
+                }`}
                 allow="autoplay; fullscreen; gamepad"
                 loading="eager"
+                onLoad={() => setIframeLoading(false)}
               />
             </div>
             <div className="flex items-center justify-between text-[11px] text-[#8493A1] px-1">
