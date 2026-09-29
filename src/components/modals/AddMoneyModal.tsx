@@ -78,11 +78,11 @@ export const AddMoneyModal: React.FC<AddMoneyModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-[#F5F8FA]">Add Money</h3>
-                <span className="px-2 py-0.5 rounded-full bg-[#0C2340] text-[#3395FF] border border-[#3395FF]/30 text-[10px] font-black">
-                  RAZORPAY
+                <span className="px-1.5 py-0.5 rounded bg-[#0C2340] border border-[#3395FF]/30 text-[9px] font-black text-[#3395FF] uppercase">
+                  Razorpay
                 </span>
               </div>
-              <p className="text-xs text-[#8493A1]">Instant Deposit • 100% Secure Gateway</p>
+              <p className="text-xs text-[#8493A1]">Instant Deposit via UPI & NetBanking</p>
             </div>
           </div>
           <button

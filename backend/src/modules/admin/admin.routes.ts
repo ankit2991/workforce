@@ -8,6 +8,7 @@ import {
   getAdminWithdrawals,
   updateWithdrawalStatus,
   broadcastNotification,
+  getUserActivities,
 } from './admin.controller';
 import { authenticate, requireRole } from '../../middleware/auth.middleware';
 
@@ -17,6 +18,7 @@ const router = Router();
 router.use(authenticate, requireRole(['ADMIN', 'SUPER_ADMIN']));
 
 router.get('/stats', getAdminStats);
+router.get('/users/activity', getUserActivities);
 router.get('/employees', getAdminEmployees);
 router.post('/employees/:id/credit-wallet', creditEmployeeWallet);
 router.get('/advances', getAdminAdvances);

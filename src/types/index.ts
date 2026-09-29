@@ -141,3 +141,32 @@ export interface BannerItem {
   bgGradient?: string;
   image?: string;
 }
+
+export interface UserSession {
+  id: string;
+  userId: string;
+  employeeCode: string;
+  userName: string;
+  loginAt: string;
+  logoutAt: string | null;
+  lastActiveAt: string;
+  durationSec: number;
+  status: 'ONLINE' | 'OFFLINE';
+  device?: string;
+}
+
+export interface UserActivity {
+  id: string;
+  employeeCode: string;
+  name: string;
+  department: string;
+  designation: string;
+  monthlySalary: number;
+  avatar: string;
+  isOnline: boolean;
+  currentSessionDurationSec: number;
+  lastLoginAt: string;
+  lastLogoutAt: string | null;
+  totalOnlineSec: number;
+  sessions: UserSession[];
+}

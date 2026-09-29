@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { AppHeader } from './AppHeader';
 import { BottomNavigation } from './BottomNavigation';
+import { useUserSessionTracker } from '../../hooks/useUserSessionTracker';
 
 interface MobileShellProps {
   children: React.ReactNode;
@@ -20,6 +21,9 @@ export const MobileShell: React.FC<MobileShellProps> = ({
 }) => {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+
+  // Automatically track user session duration and online presence
+  useUserSessionTracker();
 
   // If Admin panel, render full-width responsive desktop shell
   if (isAdmin) {

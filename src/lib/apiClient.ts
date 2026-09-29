@@ -1,4 +1,4 @@
-import type { User, Wallet, GamingWallet, WalletTransaction, Game, GameCategory, Product, Order, NotificationItem, BannerItem } from '../types';
+import type { User, Wallet, GamingWallet, WalletTransaction, Game, GameCategory, Product, Order, NotificationItem, BannerItem, UserSession, UserActivity } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1';
 
@@ -136,11 +136,15 @@ const initialGameCategories: GameCategory[] = [
   { id: 'cat-1', name: 'All Games', slug: 'all', icon: 'Sparkles', sortOrder: 0 },
   { id: 'cat-2', name: 'Arcade', slug: 'arcade', icon: 'Gamepad2', sortOrder: 1 },
   { id: 'cat-3', name: 'Action', slug: 'action', icon: 'Flame', sortOrder: 2 },
-  { id: 'cat-4', name: 'Table Games', slug: 'table-games', icon: 'Tv', sortOrder: 3 },
-  { id: 'cat-5', name: 'Dice', slug: 'dice', icon: 'Dice5', sortOrder: 4 },
+  { id: 'cat-4', name: 'Slots', slug: 'slots', icon: 'Flame', sortOrder: 3 },
+  { id: 'cat-5', name: 'Crash', slug: 'crash', icon: 'Rocket', sortOrder: 4 },
+  { id: 'cat-6', name: 'Table Games', slug: 'table-games', icon: 'Tv', sortOrder: 5 },
+  { id: 'cat-7', name: 'Live Casino', slug: 'live-casino', icon: 'Tv', sortOrder: 6 },
+  { id: 'cat-8', name: 'Dice', slug: 'dice', icon: 'Dice5', sortOrder: 7 },
 ];
 
 const initialGames: Game[] = [
+  // 5 Vercel Games
   {
     id: 'g-pinball',
     name: 'Space Pinball',
@@ -217,6 +221,82 @@ const initialGames: Game[] = [
     gameUrl: 'https://ship-captain-crew-fe.vercel.app/',
     minBet: 2.0,
     maxBet: 600.0,
+    status: 'HOT',
+    tag: 'HOT',
+    isFeatured: true,
+  },
+  // 5 Classic Original Games
+  {
+    id: 'g-candy',
+    name: 'Candy Fortune',
+    slug: 'candy-fortune',
+    category: 'Slots',
+    categorySlug: 'slots',
+    provider: 'SweetWorks Games',
+    thumbnail: 'https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?w=600',
+    banner: 'https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?w=800',
+    minBet: 1.0,
+    maxBet: 500.0,
+    status: 'HOT',
+    tag: 'HOT',
+    isFeatured: true,
+  },
+  {
+    id: 'g-olympus',
+    name: 'Olympus Quest',
+    slug: 'olympus-quest',
+    category: 'Slots',
+    categorySlug: 'slots',
+    provider: 'Mythic Play',
+    thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600',
+    banner: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800',
+    minBet: 2.0,
+    maxBet: 800.0,
+    status: 'POPULAR',
+    tag: 'POPULAR',
+    isFeatured: true,
+  },
+  {
+    id: 'g-aviator',
+    name: 'Sky Aviator',
+    slug: 'sky-aviator',
+    category: 'Crash',
+    categorySlug: 'crash',
+    provider: 'Velocity Tech',
+    thumbnail: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=600',
+    banner: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=800',
+    minBet: 1.0,
+    maxBet: 1000.0,
+    status: 'HOT',
+    tag: 'HOT',
+    isFeatured: true,
+  },
+  {
+    id: 'g-roulette',
+    name: 'Lucky Roulette',
+    slug: 'lucky-roulette',
+    category: 'Live Casino',
+    categorySlug: 'live-casino',
+    provider: 'Spin Palace Live',
+    thumbnail: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600',
+    banner: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=800',
+    minBet: 2.0,
+    maxBet: 1500.0,
+    status: 'POPULAR',
+    tag: 'POPULAR',
+    isFeatured: true,
+  },
+  {
+    id: 'g-mines',
+    name: 'Mines',
+    slug: 'mines',
+    category: 'Arcade',
+    categorySlug: 'arcade',
+    provider: 'Grid Logic',
+    thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600',
+    banner: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800',
+    minBet: 1.0,
+    maxBet: 1000.0,
     status: 'HOT',
     tag: 'HOT',
     isFeatured: true,
@@ -421,7 +501,145 @@ const initialNotifications: NotificationItem[] = [
   },
 ];
 
-// In-memory state synchronized with localStorage
+const initialUserActivities: UserActivity[] = [
+  {
+    id: 'emp-001',
+    employeeCode: 'EMP001',
+    name: 'John Doe',
+    department: 'Logistics & Operations',
+    designation: 'Senior Warehouse Specialist',
+    monthlySalary: 1500.0,
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
+    isOnline: true,
+    currentSessionDurationSec: 320,
+    lastLoginAt: new Date(Date.now() - 320 * 1000).toISOString(),
+    lastLogoutAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+    totalOnlineSec: 1520,
+    sessions: [
+      {
+        id: 'sess-101',
+        userId: 'emp-001',
+        employeeCode: 'EMP001',
+        userName: 'John Doe',
+        loginAt: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
+        logoutAt: new Date(Date.now() - 4 * 3600 * 1000 + 300 * 1000).toISOString(),
+        lastActiveAt: new Date(Date.now() - 4 * 3600 * 1000 + 300 * 1000).toISOString(),
+        durationSec: 300,
+        status: 'OFFLINE',
+        device: 'Chrome on Mobile (Android)',
+      },
+      {
+        id: 'sess-102',
+        userId: 'emp-001',
+        employeeCode: 'EMP001',
+        userName: 'John Doe',
+        loginAt: new Date(Date.now() - 2.5 * 3600 * 1000).toISOString(),
+        logoutAt: new Date(Date.now() - 2.5 * 3600 * 1000 + 900 * 1000).toISOString(),
+        lastActiveAt: new Date(Date.now() - 2.5 * 3600 * 1000 + 900 * 1000).toISOString(),
+        durationSec: 900,
+        status: 'OFFLINE',
+        device: 'Chrome on Mobile (Android)',
+      },
+      {
+        id: 'sess-103',
+        userId: 'emp-001',
+        employeeCode: 'EMP001',
+        userName: 'John Doe',
+        loginAt: new Date(Date.now() - 320 * 1000).toISOString(),
+        logoutAt: null,
+        lastActiveAt: new Date().toISOString(),
+        durationSec: 320,
+        status: 'ONLINE',
+        device: 'Chrome on Mobile (Android)',
+      },
+    ],
+  },
+  {
+    id: 'emp-002',
+    employeeCode: 'EMP002',
+    name: 'Ahmad Faiz',
+    department: 'Distribution & Fleet',
+    designation: 'Fleet Coordinator',
+    monthlySalary: 1800.0,
+    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100',
+    isOnline: false,
+    currentSessionDurationSec: 0,
+    lastLoginAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+    lastLogoutAt: new Date(Date.now() - 5 * 3600 * 1000 + 720 * 1000).toISOString(),
+    totalOnlineSec: 720,
+    sessions: [
+      {
+        id: 'sess-201',
+        userId: 'emp-002',
+        employeeCode: 'EMP002',
+        userName: 'Ahmad Faiz',
+        loginAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+        logoutAt: new Date(Date.now() - 5 * 3600 * 1000 + 720 * 1000).toISOString(),
+        lastActiveAt: new Date(Date.now() - 5 * 3600 * 1000 + 720 * 1000).toISOString(),
+        durationSec: 720,
+        status: 'OFFLINE',
+        device: 'Safari on iPhone 15',
+      },
+    ],
+  },
+  {
+    id: 'emp-003',
+    employeeCode: 'EMP003',
+    name: 'Ravi Kumar',
+    department: 'Inventory Management',
+    designation: 'Inventory Lead',
+    monthlySalary: 2100.0,
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+    isOnline: false,
+    currentSessionDurationSec: 0,
+    lastLoginAt: new Date(Date.now() - 8 * 3600 * 1000).toISOString(),
+    lastLogoutAt: new Date(Date.now() - 8 * 3600 * 1000 + 1080 * 1000).toISOString(),
+    totalOnlineSec: 1080,
+    sessions: [
+      {
+        id: 'sess-301',
+        userId: 'emp-003',
+        employeeCode: 'EMP003',
+        userName: 'Ravi Kumar',
+        loginAt: new Date(Date.now() - 8 * 3600 * 1000).toISOString(),
+        logoutAt: new Date(Date.now() - 8 * 3600 * 1000 + 1080 * 1000).toISOString(),
+        lastActiveAt: new Date(Date.now() - 8 * 3600 * 1000 + 1080 * 1000).toISOString(),
+        durationSec: 1080,
+        status: 'OFFLINE',
+        device: 'Chrome on Windows',
+      },
+    ],
+  },
+  {
+    id: 'emp-004',
+    employeeCode: 'EMP004',
+    name: 'Sarah Wong',
+    department: 'Quality Assurance',
+    designation: 'QA Officer',
+    monthlySalary: 1950.0,
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
+    isOnline: false,
+    currentSessionDurationSec: 0,
+    lastLoginAt: new Date(Date.now() - 10 * 3600 * 1000).toISOString(),
+    lastLogoutAt: new Date(Date.now() - 10 * 3600 * 1000 + 1500 * 1000).toISOString(),
+    totalOnlineSec: 1500,
+    sessions: [
+      {
+        id: 'sess-401',
+        userId: 'emp-004',
+        employeeCode: 'EMP004',
+        userName: 'Sarah Wong',
+        loginAt: new Date(Date.now() - 10 * 3600 * 1000).toISOString(),
+        logoutAt: new Date(Date.now() - 10 * 3600 * 1000 + 1500 * 1000).toISOString(),
+        lastActiveAt: new Date(Date.now() - 10 * 3600 * 1000 + 1500 * 1000).toISOString(),
+        durationSec: 1500,
+        status: 'OFFLINE',
+        device: 'Edge on Android',
+      },
+    ],
+  },
+];
+
 class LocalStore {
   wallet: Wallet;
   gamingWallet: GamingWallet;
@@ -430,13 +648,14 @@ class LocalStore {
   orders: Order[];
   games: Game[];
   products: Product[];
+  userActivities: UserActivity[];
 
   constructor() {
     const savedWallet = localStorage.getItem('workpay_wallet');
     this.wallet = savedWallet ? JSON.parse(savedWallet) : initialWallet;
 
-    const savedGaming = localStorage.getItem('workpay_gaming_wallet');
-    this.gamingWallet = savedGaming ? JSON.parse(savedGaming) : initialGamingWallet;
+    const savedGamingWallet = localStorage.getItem('workpay_gaming_wallet');
+    this.gamingWallet = savedGamingWallet ? JSON.parse(savedGamingWallet) : initialGamingWallet;
 
     const savedTxs = localStorage.getItem('workpay_transactions');
     this.transactions = savedTxs ? JSON.parse(savedTxs) : initialTransactions;
@@ -444,11 +663,14 @@ class LocalStore {
     const savedNotifs = localStorage.getItem('workpay_notifications');
     this.notifications = savedNotifs ? JSON.parse(savedNotifs) : initialNotifications;
 
-    const savedGames = localStorage.getItem('workpay_games_v4');
+    const savedGames = localStorage.getItem('workpay_games_v5');
     this.games = savedGames ? JSON.parse(savedGames) : initialGames;
 
     const savedProducts = localStorage.getItem('workpay_products');
     this.products = savedProducts ? JSON.parse(savedProducts) : initialProducts;
+
+    const savedActivities = localStorage.getItem('workpay_user_activities');
+    this.userActivities = savedActivities ? JSON.parse(savedActivities) : initialUserActivities;
 
     const savedOrders = localStorage.getItem('workpay_orders');
     this.orders = savedOrders ? JSON.parse(savedOrders) : [
@@ -480,8 +702,9 @@ class LocalStore {
     localStorage.setItem('workpay_transactions', JSON.stringify(this.transactions));
     localStorage.setItem('workpay_notifications', JSON.stringify(this.notifications));
     localStorage.setItem('workpay_orders', JSON.stringify(this.orders));
-    localStorage.setItem('workpay_games_v4', JSON.stringify(this.games));
+    localStorage.setItem('workpay_games_v5', JSON.stringify(this.games));
     localStorage.setItem('workpay_products', JSON.stringify(this.products));
+    localStorage.setItem('workpay_user_activities', JSON.stringify(this.userActivities));
   }
 }
 
@@ -992,6 +1215,91 @@ async function fallbackLocalHandler(endpoint: string, options: RequestInit = {})
     localStore.save();
 
     return { success: true, message: 'Broadcast pushed successfully' };
+  }
+
+  // User session activity tracking endpoints
+  if (endpoint === '/admin/users/activity') {
+    return localStore.userActivities;
+  }
+
+  if (endpoint === '/user/session/start' && options.method === 'POST') {
+    const code = body.employeeCode || 'EMP001';
+    const user = localStore.userActivities.find((u) => u.employeeCode === code);
+    const nowIso = new Date().toISOString();
+
+    if (user) {
+      user.isOnline = true;
+      user.lastLoginAt = nowIso;
+      user.currentSessionDurationSec = 0;
+
+      // Close any previous open session
+      user.sessions.forEach((s) => {
+        if (s.status === 'ONLINE') {
+          s.status = 'OFFLINE';
+          s.logoutAt = nowIso;
+        }
+      });
+
+      const newSess: UserSession = {
+        id: `sess-${Date.now()}`,
+        userId: user.id,
+        employeeCode: user.employeeCode,
+        userName: user.name,
+        loginAt: nowIso,
+        logoutAt: null,
+        lastActiveAt: nowIso,
+        durationSec: 0,
+        status: 'ONLINE',
+        device: body.device || navigator.userAgent.includes('Mobile') ? 'Mobile Browser' : 'Desktop Browser',
+      };
+      user.sessions.unshift(newSess);
+      localStore.save();
+      return { success: true, session: newSess };
+    }
+    return { success: true };
+  }
+
+  if (endpoint === '/user/session/heartbeat' && options.method === 'POST') {
+    const code = body.employeeCode || 'EMP001';
+    const elapsed = Number(body.elapsedSeconds || 15);
+    const user = localStore.userActivities.find((u) => u.employeeCode === code);
+
+    if (user) {
+      user.isOnline = true;
+      user.currentSessionDurationSec += elapsed;
+      user.totalOnlineSec += elapsed;
+
+      const activeSess = user.sessions.find((s) => s.status === 'ONLINE');
+      if (activeSess) {
+        activeSess.durationSec += elapsed;
+        activeSess.lastActiveAt = new Date().toISOString();
+      }
+      localStore.save();
+      return { success: true, currentSessionDurationSec: user.currentSessionDurationSec };
+    }
+    return { success: true };
+  }
+
+  if (endpoint === '/user/session/logout' && options.method === 'POST') {
+    const code = body.employeeCode || 'EMP001';
+    const nowIso = new Date().toISOString();
+    const user = localStore.userActivities.find((u) => u.employeeCode === code);
+
+    if (user) {
+      user.isOnline = false;
+      user.lastLogoutAt = nowIso;
+      user.currentSessionDurationSec = 0;
+
+      const activeSess = user.sessions.find((s) => s.status === 'ONLINE');
+      if (activeSess) {
+        activeSess.status = 'OFFLINE';
+        activeSess.logoutAt = nowIso;
+        activeSess.lastActiveAt = nowIso;
+      }
+      localStore.save();
+      return { success: true, message: 'Session closed' };
+    }
+    return { success: true };
   }
 
   return null;

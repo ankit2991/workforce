@@ -22,9 +22,13 @@ import {
   Sparkles,
   ExternalLink,
   Package,
+  Clock,
+  History,
+  Activity,
+  Radio,
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
-import type { Game, Product, User } from '../../types';
+import type { Game, Product, User, UserActivity, UserSession } from '../../types';
 import { toast } from 'sonner';
 
 export const AdminLayout: React.FC = () => {
@@ -36,12 +40,15 @@ export const AdminLayout: React.FC = () => {
   // Games & Products state
   const [games, setGames] = useState<Game[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
+  const [selectedUserActivity, setSelectedUserActivity] = useState<UserActivity | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Modals
   const [showAddGameModal, setShowAddGameModal] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showCreditWalletModal, setShowCreditWalletModal] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
 
   // Add Game Form state
   const [newGame, setNewGame] = useState({
@@ -89,15 +96,37 @@ export const AdminLayout: React.FC = () => {
 
   const fetchItems = async () => {
     try {
-      const [gRes, pRes]: any = await Promise.all([
+      const [gRes, pRes, uRes]: any = await Promise.all([
         apiRequest('/games'),
         apiRequest('/products'),
+        apiRequest('/admin/users/activity'),
       ]);
       if (gRes) setGames(gRes);
       if (pRes) setProducts(pRes);
+      if (uRes) setUserActivities(uRes);
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const formatDuration = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins < 60) return `${mins}m ${secs > 0 ? `${secs}s` : ''}`;
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return `${hrs}h ${remMins}m`;
+  };
+
+  const formatTimestamp = (iso: string | null | undefined) => {
+    if (!iso) return 'Not recorded';
+    const d = new Date(iso);
+    return (
+      d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) +
+      ', ' +
+      d.toLocaleDateString([], { day: 'numeric', month: 'short' })
+    );
   };
 
   useEffect(() => {
@@ -108,6 +137,17 @@ export const AdminLayout: React.FC = () => {
       return;
     }
     fetchItems();
+
+    // Real-time polling every 6 seconds to update online status & active durations
+    const interval = setInterval(() => {
+      apiRequest('/admin/users/activity')
+        .then((uRes: any) => {
+          if (uRes) setUserActivities(uRes);
+        })
+        .catch(() => {});
+    }, 6000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleLogout = () => {
@@ -522,93 +562,144 @@ export const AdminLayout: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 2: USERS / EMPLOYEES */}
+          {/* TAB 2: USERS / EMPLOYEES & SESSION DURATION TRACKING */}
           {activeTab === 'USERS' && (
             <div className="space-y-5 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-black text-white">Workforce Employees</h2>
-                  <p className="text-xs text-[#8493A1]">Enrolled workforce roster, salary bases & live wallet balances</p>
+                  <h2 className="text-xl font-black text-white">Workforce Presence & Activity Logs</h2>
+                  <p className="text-xs text-[#8493A1]">
+                    Real-time monitoring of user login/logout times, active user panel durations, and session visit histories.
+                  </p>
                 </div>
-                <button
-                  onClick={() => setShowCreditWalletModal(true)}
-                  className="px-4 py-2 rounded-xl bg-[#1687FF] hover:bg-[#389AFF] text-white font-bold text-xs transition flex items-center gap-1.5 shadow"
-                >
-                  <DollarSign size={14} /> Credit Wallet Stipend
-                </button>
+                <div className="flex items-center gap-2.5">
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00C982]/10 border border-[#00C982]/30 text-[#00C982] text-xs font-bold shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-[#00C982] animate-pulse" />
+                    {userActivities.filter((u) => u.isOnline).length} Active Online Now
+                  </span>
+                  <button
+                    onClick={() => setShowCreditWalletModal(true)}
+                    className="px-4 py-2 rounded-xl bg-[#1687FF] hover:bg-[#389AFF] text-white font-bold text-xs transition flex items-center gap-1.5 shadow"
+                  >
+                    <DollarSign size={14} /> Credit Wallet Stipend
+                  </button>
+                </div>
               </div>
 
-              {/* Employees Table */}
+              {/* Activity Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-[#101B24] border border-[#172631] space-y-1">
+                  <span className="text-[11px] font-bold text-[#8493A1] uppercase">Total Tracked Users</span>
+                  <p className="text-xl font-black text-white">{userActivities.length}</p>
+                  <span className="text-[10px] text-[#00C982] font-semibold">Active enterprise staff</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-[#101B24] border border-[#172631] space-y-1">
+                  <span className="text-[11px] font-bold text-[#8493A1] uppercase">Current Live Status</span>
+                  <p className="text-xl font-black text-[#00C982] flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#00C982] animate-ping inline-block" />
+                    {userActivities.filter((u) => u.isOnline).length} Online User
+                  </p>
+                  <span className="text-[10px] text-[#8493A1]">Browsing user panel</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-[#101B24] border border-[#172631] space-y-1">
+                  <span className="text-[11px] font-bold text-[#8493A1] uppercase">Total Time Logged Today</span>
+                  <p className="text-xl font-black text-[#1687FF]">
+                    {formatDuration(userActivities.reduce((acc, u) => acc + u.totalOnlineSec, 0))}
+                  </p>
+                  <span className="text-[10px] text-[#8493A1]">Across all user visits</span>
+                </div>
+              </div>
+
+              {/* Employees Table with Login / Logout & Duration Tracking */}
               <div className="rounded-2xl bg-[#101B24] border border-[#172631] overflow-hidden shadow">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-[#0B141C] text-[#8493A1] border-b border-[#172631]">
                     <tr>
                       <th className="py-3 px-4 font-bold">Employee</th>
-                      <th className="py-3 px-4 font-bold">Department</th>
-                      <th className="py-3 px-4 font-bold">Monthly Base</th>
-                      <th className="py-3 px-4 font-bold">Wallet Balance</th>
-                      <th className="py-3 px-4 font-bold">Status</th>
+                      <th className="py-3 px-4 font-bold">Live Status</th>
+                      <th className="py-3 px-4 font-bold">Last Login Time</th>
+                      <th className="py-3 px-4 font-bold">Last Logout Time</th>
+                      <th className="py-3 px-4 font-bold">Total Time on Panel</th>
                       <th className="py-3 px-4 font-bold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#172631]">
-                    <tr className="hover:bg-[#142331]/50 transition">
-                      <td className="py-3.5 px-4 flex items-center gap-3">
-                        <img
-                          src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
-                          alt="John Doe"
-                          className="w-8 h-8 rounded-lg object-cover"
-                        />
-                        <div>
-                          <p className="font-bold text-white">John Doe</p>
-                          <span className="text-[10px] text-[#1687FF]">EMP001</span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-[#8493A1]">Logistics & Operations</td>
-                      <td className="py-3.5 px-4 font-bold text-white">MYR 1,500.00</td>
-                      <td className="py-3.5 px-4 font-black text-[#00C982]">MYR 1,200.00</td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 rounded-md bg-[#00C982]/15 text-[#00C982] text-[10px] font-bold">
-                          ACTIVE
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={() => setShowCreditWalletModal(true)}
-                          className="px-2.5 py-1 rounded-lg bg-[#1687FF]/20 text-[#1687FF] hover:bg-[#1687FF] hover:text-white font-bold transition text-[11px]"
-                        >
-                          Credit Stipend
-                        </button>
-                      </td>
-                    </tr>
-
-                    <tr className="hover:bg-[#142331]/50 transition">
-                      <td className="py-3.5 px-4 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[#7B22FF]/20 text-[#A83DF4] flex items-center justify-center font-bold">
-                          AF
-                        </div>
-                        <div>
-                          <p className="font-bold text-white">Ahmad Faiz</p>
-                          <span className="text-[10px] text-[#1687FF]">EMP002</span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-[#8493A1]">Distribution & Fleet</td>
-                      <td className="py-3.5 px-4 font-bold text-white">MYR 1,800.00</td>
-                      <td className="py-3.5 px-4 font-black text-[#00C982]">MYR 950.00</td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 rounded-md bg-[#00C982]/15 text-[#00C982] text-[10px] font-bold">
-                          ACTIVE
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={() => setShowCreditWalletModal(true)}
-                          className="px-2.5 py-1 rounded-lg bg-[#1687FF]/20 text-[#1687FF] hover:bg-[#1687FF] hover:text-white font-bold transition text-[11px]"
-                        >
-                          Credit Stipend
-                        </button>
-                      </td>
-                    </tr>
+                    {userActivities.map((user) => (
+                      <tr key={user.id} className="hover:bg-[#142331]/50 transition">
+                        <td className="py-3.5 px-4 flex items-center gap-3">
+                          <img
+                            src={user.avatar}
+                            alt={user.name}
+                            className="w-8 h-8 rounded-lg object-cover border border-white/10"
+                          />
+                          <div>
+                            <p className="font-bold text-white">{user.name}</p>
+                            <span className="text-[10px] text-[#1687FF]">
+                              {user.employeeCode} • {user.department}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {user.isOnline ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#00C982]/15 border border-[#00C982]/30 text-[#00C982] text-[10px] font-black">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#00C982] animate-pulse" />
+                              ONLINE NOW ({formatDuration(user.currentSessionDurationSec)})
+                            </div>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md bg-[#8493A1]/15 text-[#8493A1] text-[10px] font-bold">
+                              OFFLINE
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 font-medium text-white">
+                          <div className="flex items-center gap-1 text-[#8493A1]">
+                            <Clock size={12} className="text-[#1687FF]" />
+                            <span className="text-white font-semibold">{formatTimestamp(user.lastLoginAt)}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-medium text-white">
+                          {user.isOnline ? (
+                            <span className="text-[#00C982] font-bold flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#00C982]" />
+                              Still Active
+                            </span>
+                          ) : (
+                            <span className="text-[#8493A1]">{formatTimestamp(user.lastLogoutAt)}</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div>
+                            <span className="font-black text-[#1687FF]">
+                              {formatDuration(user.totalOnlineSec)}
+                            </span>
+                            <p className="text-[10px] text-[#8493A1]">
+                              {user.sessions.length} visit{user.sessions.length > 1 ? 's' : ''} logged
+                            </p>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedUserActivity(user);
+                                setShowSessionModal(true);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-[#7B22FF]/15 text-[#A83DF4] hover:bg-[#7B22FF] hover:text-white font-bold transition text-[11px] flex items-center gap-1"
+                              title="View individual session history"
+                            >
+                              <History size={13} />
+                              <span>View Sessions</span>
+                            </button>
+                            <button
+                              onClick={() => setShowCreditWalletModal(true)}
+                              className="px-2.5 py-1 rounded-lg bg-[#1687FF]/20 text-[#1687FF] hover:bg-[#1687FF] hover:text-white font-bold transition text-[11px]"
+                            >
+                              Credit Stipend
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -1208,6 +1299,149 @@ export const AdminLayout: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* USER SESSION HISTORY & ACTIVITY LOGS MODAL */}
+      {showSessionModal && selectedUserActivity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-[#0B141C] border border-[#172631] rounded-3xl p-6 shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-4 border-b border-[#172631]">
+              <div className="flex items-center gap-3">
+                <img
+                  src={selectedUserActivity.avatar}
+                  alt={selectedUserActivity.name}
+                  className="w-12 h-12 rounded-xl object-cover border border-white/10 shadow"
+                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-white">{selectedUserActivity.name}</h3>
+                    <span className="px-2 py-0.5 rounded bg-[#1687FF]/20 text-[#1687FF] text-[10px] font-bold">
+                      {selectedUserActivity.employeeCode}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#8493A1]">
+                    {selectedUserActivity.designation} • {selectedUserActivity.department}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSessionModal(false)}
+                className="w-8 h-8 rounded-full bg-[#101B24] flex items-center justify-center text-[#8493A1] hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Session Stats Banner */}
+            <div className="grid grid-cols-3 gap-2.5 p-3 rounded-2xl bg-[#101B24] border border-[#172631] text-center">
+              <div>
+                <span className="block text-[10px] text-[#8493A1] uppercase font-bold">Current Status</span>
+                <span
+                  className={`text-xs font-black ${
+                    selectedUserActivity.isOnline ? 'text-[#00C982]' : 'text-[#8493A1]'
+                  }`}
+                >
+                  {selectedUserActivity.isOnline ? '🟢 ONLINE NOW' : '⚪ OFFLINE'}
+                </span>
+              </div>
+              <div>
+                <span className="block text-[10px] text-[#8493A1] uppercase font-bold">Total Time Logged</span>
+                <span className="text-xs font-black text-[#1687FF]">
+                  {formatDuration(selectedUserActivity.totalOnlineSec)}
+                </span>
+              </div>
+              <div>
+                <span className="block text-[10px] text-[#8493A1] uppercase font-bold">Total Visits</span>
+                <span className="text-xs font-black text-white">
+                  {selectedUserActivity.sessions.length} Sessions
+                </span>
+              </div>
+            </div>
+
+            {/* Individual Session History List */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <History size={14} className="text-[#1687FF]" />
+                  Chronological Session History
+                </h4>
+                <span className="text-[10px] text-[#8493A1]">Individual Login/Logout breakdown</span>
+              </div>
+
+              <div className="max-h-64 overflow-y-auto space-y-2.5 pr-1">
+                {selectedUserActivity.sessions.map((sess, idx) => (
+                  <div
+                    key={sess.id || idx}
+                    className={`p-3.5 rounded-2xl border transition-all ${
+                      sess.status === 'ONLINE'
+                        ? 'bg-[#00C982]/5 border-[#00C982]/40 ring-1 ring-[#00C982]/20'
+                        : 'bg-[#101B24] border-[#172631]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center text-[10px] font-black text-white">
+                          #{selectedUserActivity.sessions.length - idx}
+                        </span>
+                        <span className="text-xs font-bold text-white">
+                          {sess.status === 'ONLINE' ? 'Active Live Session' : 'Completed Session'}
+                        </span>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-black ${
+                          sess.status === 'ONLINE'
+                            ? 'bg-[#00C982]/20 text-[#00C982]'
+                            : 'bg-white/10 text-[#8493A1]'
+                        }`}
+                      >
+                        {sess.status === 'ONLINE' ? 'ACTIVE' : 'SEALED'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-[#172631]">
+                      <div>
+                        <span className="text-[10px] text-[#8493A1] block">Login Time:</span>
+                        <span className="text-white font-semibold text-[11px]">
+                          {formatTimestamp(sess.loginAt)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#8493A1] block">Logout Time:</span>
+                        <span className="text-white font-semibold text-[11px]">
+                          {sess.status === 'ONLINE' ? (
+                            <span className="text-[#00C982] font-bold">Currently in app</span>
+                          ) : (
+                            formatTimestamp(sess.logoutAt)
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-[#172631]/60 text-[11px]">
+                      <span className="text-[#8493A1] text-[10px] flex items-center gap-1">
+                        <Smartphone size={11} /> {sess.device || 'Mobile App'}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-md bg-[#1687FF]/15 text-[#1687FF] font-black text-[10px]">
+                        Duration on Panel: {formatDuration(sess.durationSec)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer Close */}
+            <div className="pt-2">
+              <button
+                onClick={() => setShowSessionModal(false)}
+                className="w-full py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] text-white font-bold text-xs transition"
+              >
+                Close Activity Logs
+              </button>
+            </div>
           </div>
         </div>
       )}

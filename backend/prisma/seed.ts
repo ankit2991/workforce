@@ -189,8 +189,11 @@ async function main() {
     { name: 'All Games', slug: 'all', icon: 'Sparkles', sortOrder: 0 },
     { name: 'Arcade', slug: 'arcade', icon: 'Gamepad2', sortOrder: 1 },
     { name: 'Action', slug: 'action', icon: 'Flame', sortOrder: 2 },
-    { name: 'Table Games', slug: 'table-games', icon: 'Tv', sortOrder: 3 },
-    { name: 'Dice', slug: 'dice', icon: 'Dice5', sortOrder: 4 },
+    { name: 'Slots', slug: 'slots', icon: 'Flame', sortOrder: 3 },
+    { name: 'Crash', slug: 'crash', icon: 'Rocket', sortOrder: 4 },
+    { name: 'Table Games', slug: 'table-games', icon: 'Tv', sortOrder: 5 },
+    { name: 'Live Casino', slug: 'live-casino', icon: 'Tv', sortOrder: 6 },
+    { name: 'Dice', slug: 'dice', icon: 'Dice5', sortOrder: 7 },
   ];
 
   const categoryMap = new Map<string, string>();
@@ -203,11 +206,12 @@ async function main() {
     categoryMap.set(cat.slug, record.id);
   }
 
-  // Clear out old games to ensure only the 5 requested games are present
+  // Clear out old games to ensure clean synchronization
   await prisma.game.deleteMany({});
 
-  // 9. Seed the 5 New Games with live Vercel URLs
+  // 9. Seed All 10 Games (5 Vercel Games + 5 Original Classic Games)
   const games = [
+    // 5 Vercel Games
     {
       name: 'Space Pinball',
       slug: 'space-pinball',
@@ -278,6 +282,77 @@ async function main() {
       isFeatured: true,
       sortOrder: 5,
     },
+    // 5 Classic Original Games
+    {
+      name: 'Candy Fortune',
+      slug: 'candy-fortune',
+      categoryId: categoryMap.get('slots')!,
+      provider: 'SweetWorks Games',
+      thumbnail: 'https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?w=600',
+      banner: 'https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?w=800',
+      gameUrl: null,
+      status: GameBadge.HOT,
+      minBet: 1.0,
+      maxBet: 500.0,
+      isFeatured: true,
+      sortOrder: 6,
+    },
+    {
+      name: 'Olympus Quest',
+      slug: 'olympus-quest',
+      categoryId: categoryMap.get('slots')!,
+      provider: 'Mythic Play',
+      thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600',
+      banner: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800',
+      gameUrl: null,
+      status: GameBadge.POPULAR,
+      minBet: 2.0,
+      maxBet: 800.0,
+      isFeatured: true,
+      sortOrder: 7,
+    },
+    {
+      name: 'Sky Aviator',
+      slug: 'sky-aviator',
+      categoryId: categoryMap.get('crash')!,
+      provider: 'Velocity Tech',
+      thumbnail: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=600',
+      banner: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=800',
+      gameUrl: null,
+      status: GameBadge.HOT,
+      minBet: 1.0,
+      maxBet: 1000.0,
+      isFeatured: true,
+      sortOrder: 8,
+    },
+    {
+      name: 'Lucky Roulette',
+      slug: 'lucky-roulette',
+      categoryId: categoryMap.get('live-casino')!,
+      provider: 'Spin Palace Live',
+      thumbnail: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600',
+      banner: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=800',
+      gameUrl: null,
+      status: GameBadge.POPULAR,
+      minBet: 2.0,
+      maxBet: 1500.0,
+      isFeatured: true,
+      sortOrder: 9,
+    },
+    {
+      name: 'Mines',
+      slug: 'mines',
+      categoryId: categoryMap.get('arcade')!,
+      provider: 'Grid Logic',
+      thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600',
+      banner: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800',
+      gameUrl: null,
+      status: GameBadge.HOT,
+      minBet: 1.0,
+      maxBet: 1000.0,
+      isFeatured: true,
+      sortOrder: 10,
+    },
   ];
 
   for (const game of games) {
@@ -287,6 +362,47 @@ async function main() {
       create: game,
     });
   }
+
+  // Seed user sessions for John Doe
+  await prisma.userSession.deleteMany({ where: { userId: employeeUser.id } });
+  await prisma.userSession.createMany({
+    data: [
+      {
+        userId: employeeUser.id,
+        loginAt: new Date(Date.now() - 4 * 3600 * 1000),
+        logoutAt: new Date(Date.now() - 4 * 3600 * 1000 + 300 * 1000),
+        durationSec: 300,
+        isActive: false,
+        device: 'Chrome on Mobile (Android)',
+      },
+      {
+        userId: employeeUser.id,
+        loginAt: new Date(Date.now() - 2.5 * 3600 * 1000),
+        logoutAt: new Date(Date.now() - 2.5 * 3600 * 1000 + 900 * 1000),
+        durationSec: 900,
+        isActive: false,
+        device: 'Chrome on Mobile (Android)',
+      },
+      {
+        userId: employeeUser.id,
+        loginAt: new Date(Date.now() - 320 * 1000),
+        logoutAt: null,
+        durationSec: 320,
+        isActive: true,
+        device: 'Chrome on Mobile (Android)',
+      },
+    ],
+  });
+
+  await prisma.user.update({
+    where: { id: employeeUser.id },
+    data: {
+      isOnline: true,
+      totalOnlineSec: 1520,
+      lastLoginAt: new Date(Date.now() - 320 * 1000),
+      lastLogoutAt: new Date(Date.now() - 3 * 3600 * 1000),
+    },
+  });
 
   // 10. Seed Shop Categories
   const shopCategories = [

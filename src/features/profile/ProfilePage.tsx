@@ -16,6 +16,7 @@ import {
 import { apiRequest } from '../../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { recordUserLogout } from '../../hooks/useUserSessionTracker';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -44,7 +45,8 @@ export const ProfilePage: React.FC = () => {
     joiningDate: '2024-01-15',
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await recordUserLogout(employee.employeeCode);
     localStorage.removeItem('workpay_token');
     toast.success('Logged out successfully');
     navigate('/login');
