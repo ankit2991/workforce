@@ -936,9 +936,25 @@ async function fallbackLocalHandler(endpoint: string, options: RequestInit = {})
 
   if (endpoint.startsWith('/games/') && options.method === 'DELETE') {
     const id = endpoint.replace('/games/', '');
-    localStore.games = localStore.games.filter((g) => g.id !== id);
+    localStore.games = localStore.games.filter((g) => g.id !== id && g.slug !== id);
     localStore.save();
     return { success: true, message: 'Game removed successfully' };
+  }
+
+  if (endpoint.startsWith('/games/') && (options.method === 'PUT' || options.method === 'PATCH')) {
+    const id = endpoint.replace('/games/', '');
+    const idx = localStore.games.findIndex((g) => g.id === id || g.slug === id);
+    if (idx !== -1) {
+      localStore.games[idx] = {
+        ...localStore.games[idx],
+        ...body,
+        minBet: body.minBet !== undefined ? Number(body.minBet) : localStore.games[idx].minBet,
+        maxBet: body.maxBet !== undefined ? Number(body.maxBet) : localStore.games[idx].maxBet,
+      };
+      localStore.save();
+      return localStore.games[idx];
+    }
+    return { success: false, message: 'Game not found' };
   }
 
   if (endpoint === '/game-categories') {

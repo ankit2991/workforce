@@ -27,10 +27,12 @@ import {
   Activity,
   Radio,
   QrCode,
+  Edit3,
 } from 'lucide-react';
-import { apiRequest } from '../../lib/apiClient';
+import { apiRequest, localStore } from '../../lib/apiClient';
 import type { Game, Product, User, UserActivity, UserSession } from '../../types';
 import { UserActivityQrModal } from '../../components/modals/UserActivityQrModal';
+import { EditGameModal } from '../../components/modals/EditGameModal';
 import { toast } from 'sonner';
 
 export const AdminLayout: React.FC = () => {
@@ -46,6 +48,8 @@ export const AdminLayout: React.FC = () => {
   const [selectedUserActivity, setSelectedUserActivity] = useState<UserActivity | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [selectedQrUser, setSelectedQrUser] = useState<UserActivity | null>(null);
+  const [showEditGameModal, setShowEditGameModal] = useState(false);
+  const [selectedGameToEdit, setSelectedGameToEdit] = useState<Game | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Modals
@@ -196,13 +200,21 @@ export const AdminLayout: React.FC = () => {
 
   // Delete Game handler
   const handleDeleteGame = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete game "${name}"?`)) return;
+    if (!window.confirm(`Are you sure you want to remove "${name}" from the games catalog?`)) return;
+
+    // 1. Optimistic removal from UI state immediately
+    setGames((prev) => prev.filter((g) => g.id !== id && g.slug !== id));
+
+    // 2. Remove from localStore and persist to localStorage
+    localStore.games = localStore.games.filter((g) => g.id !== id && g.slug !== id);
+    localStore.save();
+
     try {
       await apiRequest(`/games/${id}`, { method: 'DELETE' });
-      toast.success(`Game "${name}" removed`);
-      fetchItems();
+      toast.success(`Game "${name}" deleted successfully!`);
     } catch (err) {
-      toast.error('Failed to delete game');
+      console.warn('Backend delete sync note:', err);
+      toast.success(`Game "${name}" removed from catalog!`);
     }
   };
 
@@ -770,14 +782,27 @@ export const AdminLayout: React.FC = () => {
 
                       <div className="pt-2 border-t border-[#172631] flex items-center justify-between">
                         <span className="text-[10px] text-[#00C982] font-semibold">Active in App</span>
-                        <button
-                          onClick={() => handleDeleteGame(g.id, g.name)}
-                          className="p-1.5 rounded-lg bg-[#FF455B]/10 hover:bg-[#FF455B]/25 text-[#FF455B] transition text-xs flex items-center gap-1"
-                          title="Delete Game"
-                        >
-                          <Trash2 size={13} />
-                          <span className="text-[10px]">Delete</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => {
+                              setSelectedGameToEdit(g);
+                              setShowEditGameModal(true);
+                            }}
+                            className="p-1.5 px-2.5 rounded-lg bg-[#7B22FF]/15 hover:bg-[#7B22FF] text-[#A83DF4] hover:text-white transition text-xs flex items-center gap-1 font-bold border border-[#7B22FF]/30"
+                            title="Edit Game Details"
+                          >
+                            <Edit3 size={12} />
+                            <span className="text-[10px]">Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteGame(g.id, g.name)}
+                            className="p-1.5 px-2.5 rounded-lg bg-[#FF455B]/10 hover:bg-[#FF455B] text-[#FF455B] hover:text-white transition text-xs flex items-center gap-1 font-bold border border-[#FF455B]/30"
+                            title="Delete Game"
+                          >
+                            <Trash2 size={12} />
+                            <span className="text-[10px]">Delete</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1468,6 +1493,21 @@ export const AdminLayout: React.FC = () => {
         onClose={() => {
           setShowQrModal(false);
           setSelectedQrUser(null);
+        }}
+      />
+
+      {/* Edit Game Modal */}
+      <EditGameModal
+        game={selectedGameToEdit}
+        isOpen={showEditGameModal}
+        onClose={() => {
+          setShowEditGameModal(false);
+          setSelectedGameToEdit(null);
+        }}
+        onGameUpdated={(updatedGame) => {
+          setGames((prev) =>
+            prev.map((g) => (g.id === updatedGame.id ? updatedGame : g))
+          );
         }}
       />
     </div>

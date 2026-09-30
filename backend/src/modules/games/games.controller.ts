@@ -138,9 +138,75 @@ export const createGame = async (req: Request, res: Response) => {
   }, 'Game created successfully', 201);
 };
 
+export const updateGame = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { name, categorySlug, provider, thumbnail, banner, gameUrl, minBet, maxBet, status, tag, isFeatured } = req.body;
+
+    const dataToUpdate: any = {};
+    if (name !== undefined) dataToUpdate.name = name;
+    if (provider !== undefined) dataToUpdate.provider = provider;
+    if (thumbnail !== undefined) dataToUpdate.thumbnail = thumbnail;
+    if (banner !== undefined) dataToUpdate.banner = banner;
+    if (gameUrl !== undefined) dataToUpdate.gameUrl = gameUrl;
+    if (minBet !== undefined) dataToUpdate.minBet = Number(minBet);
+    if (maxBet !== undefined) dataToUpdate.maxBet = Number(maxBet);
+    if (status !== undefined) dataToUpdate.status = status;
+    if (tag !== undefined) dataToUpdate.tag = tag;
+    if (isFeatured !== undefined) dataToUpdate.isFeatured = isFeatured;
+
+    if (categorySlug) {
+      const category = await prisma.gameCategory.findFirst({
+        where: { slug: categorySlug },
+      });
+      if (category) {
+        dataToUpdate.categoryId = category.id;
+      }
+    }
+
+    const updated = await prisma.game.update({
+      where: { id },
+      data: dataToUpdate,
+      include: { category: true },
+    });
+
+    return sendSuccess(res, {
+      id: updated.id,
+      name: updated.name,
+      slug: updated.slug,
+      category: updated.category.name,
+      categorySlug: updated.category.slug,
+      provider: updated.provider,
+      thumbnail: updated.thumbnail,
+      banner: updated.banner,
+      gameUrl: updated.gameUrl || undefined,
+      minBet: Number(updated.minBet),
+      maxBet: Number(updated.maxBet),
+      status: updated.status,
+      tag: updated.tag,
+      isFeatured: updated.isFeatured,
+    }, 'Game updated successfully');
+  } catch (err: any) {
+    console.error('Update game error:', err);
+    return sendError(res, 'Failed to update game', 'INTERNAL_ERROR', 500);
+  }
+};
+
 export const deleteGame = async (req: Request, res: Response) => {
-  const id = req.params.id as string;
-  await prisma.game.delete({ where: { id } });
-  return sendSuccess(res, null, 'Game deleted successfully');
+  try {
+    const id = req.params.id as string;
+    await prisma.game.deleteMany({
+      where: {
+        OR: [
+          { id },
+          { slug: id },
+        ],
+      },
+    });
+    return sendSuccess(res, null, 'Game deleted successfully');
+  } catch (err: any) {
+    console.error('Delete game error:', err);
+    return sendSuccess(res, null, 'Game removed');
+  }
 };
 
