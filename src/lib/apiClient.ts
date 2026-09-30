@@ -144,16 +144,16 @@ const initialGameCategories: GameCategory[] = [
 ];
 
 const initialGames: Game[] = [
-  // 5 Vercel Games
+  // 5 Vercel Games with Official Game Artworks
   {
     id: 'g-pinball',
-    name: 'Space Pinball',
-    slug: 'space-pinball',
+    name: 'Pinball Cashout',
+    slug: 'pinball-cashout',
     category: 'Arcade',
     categorySlug: 'arcade',
     provider: 'Pinball Retro Lab',
-    thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600',
-    banner: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800',
+    thumbnail: '/assets/games/pinball.jpg',
+    banner: '/assets/games/pinball.jpg',
     gameUrl: 'https://pinballfe.vercel.app',
     minBet: 1.0,
     maxBet: 500.0,
@@ -163,13 +163,13 @@ const initialGames: Game[] = [
   },
   {
     id: 'g-galaga',
-    name: 'Galaga Retro Space',
-    slug: 'galaga-retro-space',
+    name: 'Galaga Skill Wager',
+    slug: 'galaga-skill-wager',
     category: 'Arcade',
     categorySlug: 'arcade',
     provider: 'Bandai Classic Arcade',
-    thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600',
-    banner: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800',
+    thumbnail: '/assets/games/galaga.png',
+    banner: '/assets/games/galaga.png',
     gameUrl: 'https://galaga-fe.vercel.app',
     minBet: 1.0,
     maxBet: 500.0,
@@ -184,8 +184,8 @@ const initialGames: Game[] = [
     category: 'Action',
     categorySlug: 'action',
     provider: 'Bomber Studio',
-    thumbnail: 'https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?w=600',
-    banner: 'https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?w=800',
+    thumbnail: '/assets/games/bomberboy.jpg',
+    banner: '/assets/games/bomberboy.jpg',
     gameUrl: 'https://bomberboy-game.vercel.app/',
     minBet: 2.0,
     maxBet: 800.0,
@@ -200,8 +200,8 @@ const initialGames: Game[] = [
     category: 'Table Games',
     categorySlug: 'table-games',
     provider: 'Dice Master Gaming',
-    thumbnail: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600',
-    banner: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=800',
+    thumbnail: '/assets/games/liarsdice.jpg',
+    banner: '/assets/games/liarsdice.jpg',
     gameUrl: 'https://lair-s-daice.vercel.app/',
     minBet: 5.0,
     maxBet: 1000.0,
@@ -216,8 +216,8 @@ const initialGames: Game[] = [
     category: 'Dice',
     categorySlug: 'dice',
     provider: 'Nautical Rollers',
-    thumbnail: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600',
-    banner: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800',
+    thumbnail: '/assets/games/shipcaptain.jpg',
+    banner: '/assets/games/shipcaptain.jpg',
     gameUrl: 'https://ship-captain-crew-fe.vercel.app/',
     minBet: 2.0,
     maxBet: 600.0,
@@ -663,7 +663,7 @@ class LocalStore {
     const savedNotifs = localStorage.getItem('workpay_notifications');
     this.notifications = savedNotifs ? JSON.parse(savedNotifs) : initialNotifications;
 
-    const savedGames = localStorage.getItem('workpay_games_v5');
+    const savedGames = localStorage.getItem('workpay_games_v6');
     this.games = savedGames ? JSON.parse(savedGames) : initialGames;
 
     const savedProducts = localStorage.getItem('workpay_products');
@@ -702,7 +702,7 @@ class LocalStore {
     localStorage.setItem('workpay_transactions', JSON.stringify(this.transactions));
     localStorage.setItem('workpay_notifications', JSON.stringify(this.notifications));
     localStorage.setItem('workpay_orders', JSON.stringify(this.orders));
-    localStorage.setItem('workpay_games_v5', JSON.stringify(this.games));
+    localStorage.setItem('workpay_games_v6', JSON.stringify(this.games));
     localStorage.setItem('workpay_products', JSON.stringify(this.products));
     localStorage.setItem('workpay_user_activities', JSON.stringify(this.userActivities));
   }
