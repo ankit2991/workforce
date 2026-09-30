@@ -12,15 +12,18 @@ import {
   Mail,
   Calendar,
   Lock,
+  QrCode,
 } from 'lucide-react';
-import { apiRequest } from '../../lib/apiClient';
+import { apiRequest, localStore } from '../../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { recordUserLogout } from '../../hooks/useUserSessionTracker';
+import { UserActivityQrModal } from '../../components/modals/UserActivityQrModal';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
+  const [showQrModal, setShowQrModal] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchMe = async () => {
@@ -78,6 +81,32 @@ export const ProfilePage: React.FC = () => {
             </span>
             <span className="text-[10px] text-[#8493A1]">{employee.department}</span>
           </div>
+        </div>
+      </div>
+
+      {/* Activity Log QR Pass Card */}
+      <div
+        onClick={() => setShowQrModal(true)}
+        className="p-4 rounded-2xl bg-gradient-to-r from-[#7B22FF]/20 via-[#101B24] to-[#00C982]/15 border border-[#7B22FF]/40 flex items-center justify-between cursor-pointer hover:border-[#7B22FF] transition shadow-lg group active:scale-[0.99]"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-[#7B22FF]/25 border border-[#7B22FF]/50 flex items-center justify-center text-[#E0A7FF] group-hover:scale-105 transition shadow-md shadow-[#7B22FF]/20">
+            <QrCode size={22} />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+              My Activity & Presence QR Pass
+              <Sparkles size={12} className="text-[#00C982]" />
+            </h4>
+            <p className="text-[10px] text-[#8493A1]">
+              Scan to verify login/logout & online hours
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 text-[#E0A7FF] text-xs font-bold bg-[#7B22FF]/20 px-2.5 py-1 rounded-xl border border-[#7B22FF]/30">
+          <span>Show QR</span>
+          <ChevronRight size={14} />
         </div>
       </div>
 
@@ -157,6 +186,17 @@ export const ProfilePage: React.FC = () => {
           <ChevronRight size={16} />
         </button>
       </div>
+
+      {/* Activity Log QR Pass Modal */}
+      <UserActivityQrModal
+        user={
+          localStore.userActivities.find(
+            (u) => u.employeeCode === employee.employeeCode
+          ) || localStore.userActivities[0]
+        }
+        isOpen={showQrModal}
+        onClose={() => setShowQrModal(false)}
+      />
     </div>
   );
 };

@@ -26,9 +26,11 @@ import {
   History,
   Activity,
   Radio,
+  QrCode,
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 import type { Game, Product, User, UserActivity, UserSession } from '../../types';
+import { UserActivityQrModal } from '../../components/modals/UserActivityQrModal';
 import { toast } from 'sonner';
 
 export const AdminLayout: React.FC = () => {
@@ -42,6 +44,8 @@ export const AdminLayout: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
   const [selectedUserActivity, setSelectedUserActivity] = useState<UserActivity | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [selectedQrUser, setSelectedQrUser] = useState<UserActivity | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Modals
@@ -679,6 +683,17 @@ export const AdminLayout: React.FC = () => {
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedQrUser(user);
+                                setShowQrModal(true);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-[#00C982]/15 text-[#00C982] hover:bg-[#00C982] hover:text-black font-bold transition text-[11px] flex items-center gap-1 border border-[#00C982]/30 shadow-sm"
+                              title="Generate and scan activity log QR Pass"
+                            >
+                              <QrCode size={13} />
+                              <span>QR Pass</span>
+                            </button>
                             <button
                               onClick={() => {
                                 setSelectedUserActivity(user);
@@ -1445,6 +1460,16 @@ export const AdminLayout: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* User Activity QR Pass Modal */}
+      <UserActivityQrModal
+        user={selectedQrUser}
+        isOpen={showQrModal}
+        onClose={() => {
+          setShowQrModal(false);
+          setSelectedQrUser(null);
+        }}
+      />
     </div>
   );
 };

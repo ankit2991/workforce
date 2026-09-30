@@ -10,6 +10,7 @@ import { ProfilePage } from "./features/profile/ProfilePage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { AdminLogin } from "./features/admin/AdminLogin";
 import { AdminLayout } from "./features/admin/AdminLayout";
+import { UserActivityQrView } from "./features/activity/UserActivityQrView";
 
 function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('workpay_admin_token');
@@ -26,6 +27,10 @@ export default function App() {
     <DefaultProviders>
       <BrowserRouter>
         <Routes>
+          {/* Public Activity Log Verification (Scanned via QR Code) */}
+          <Route path="/verify-log/:employeeCode" element={<UserActivityQrView />} />
+          <Route path="/activity-pass/:employeeCode" element={<UserActivityQrView />} />
+
           {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />

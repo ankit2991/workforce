@@ -23,6 +23,7 @@ import adminRoutes from './modules/admin/admin.routes';
 
 import { getGameCategories } from './modules/games/games.controller';
 import { getProductCategories, getProducts, getProductBySlug } from './modules/shop/shop.controller';
+import { getPublicUserActivity } from './modules/admin/admin.controller';
 
 const app = express();
 
@@ -71,6 +72,7 @@ v1Router.get('/product-categories', getProductCategories);
 v1Router.use('/orders', ordersRoutes);
 v1Router.use('/notifications', notificationsRoutes);
 v1Router.use('/admin', adminRoutes);
+v1Router.get('/public/user-activity/:employeeCode', getPublicUserActivity as any);
 
 app.use('/api/v1', v1Router);
 

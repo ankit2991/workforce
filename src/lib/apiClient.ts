@@ -1222,6 +1222,14 @@ async function fallbackLocalHandler(endpoint: string, options: RequestInit = {})
     return localStore.userActivities;
   }
 
+  if (endpoint.startsWith('/public/user-activity/') || endpoint.startsWith('/user/activity/')) {
+    const code = endpoint.replace('/public/user-activity/', '').replace('/user/activity/', '');
+    const user = localStore.userActivities.find(
+      (u) => u.employeeCode.toUpperCase() === code.toUpperCase()
+    );
+    return user || localStore.userActivities[0];
+  }
+
   if (endpoint === '/user/session/start' && options.method === 'POST') {
     const code = body.employeeCode || 'EMP001';
     const user = localStore.userActivities.find((u) => u.employeeCode === code);

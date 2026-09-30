@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
 import { sendSuccess, sendError } from '../../utils/response';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
@@ -438,4 +438,56 @@ export const getUserActivities = async (req: AuthenticatedRequest, res: Response
   });
 
   return sendSuccess(res, formatted, 'User activities retrieved successfully');
+};
+
+export const getPublicUserActivity = async (req: Request, res: Response) => {
+  const employeeCode = req.params.employeeCode as string;
+  const emp = await prisma.employee.findUnique({
+    where: { employeeCode },
+    include: {
+      user: {
+        include: {
+          sessions: {
+            orderBy: { loginAt: 'desc' },
+            take: 30,
+          },
+        },
+      },
+    },
+  });
+
+  if (!emp) {
+    return sendError(res, 'Employee with this code not found', 'NOT_FOUND', 404);
+  }
+
+  const user = emp.user;
+  const activeSession = user.sessions.find((s) => s.isActive);
+  const formatted = {
+    id: emp.id,
+    employeeCode: emp.employeeCode,
+    name: `${emp.firstName} ${emp.lastName}`,
+    department: emp.department || 'Operations',
+    designation: emp.designation || 'Staff',
+    monthlySalary: Number(emp.monthlySalary),
+    avatar: emp.profileImage || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    isOnline: user.isOnline,
+    currentSessionDurationSec: activeSession ? activeSession.durationSec : 0,
+    lastLoginAt: user.lastLoginAt?.toISOString() || null,
+    lastLogoutAt: user.lastLogoutAt?.toISOString() || null,
+    totalOnlineSec: user.totalOnlineSec,
+    sessions: user.sessions.map((s) => ({
+      id: s.id,
+      userId: s.userId,
+      employeeCode: emp.employeeCode,
+      userName: `${emp.firstName} ${emp.lastName}`,
+      loginAt: s.loginAt.toISOString(),
+      logoutAt: s.logoutAt?.toISOString() || null,
+      lastActiveAt: s.lastActiveAt.toISOString(),
+      durationSec: s.durationSec,
+      status: s.isActive ? 'ONLINE' : 'OFFLINE',
+      device: s.device || 'Mobile App',
+    })),
+  };
+
+  return sendSuccess(res, formatted, 'User activity verified successfully');
 };
