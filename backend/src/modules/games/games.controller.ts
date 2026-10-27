@@ -117,11 +117,15 @@ export const getGamesDiagnostics = async (_req: Request, res: Response) => {
 };
 
 export const getGameBySlug = async (req: Request, res: Response) => {
+  const slug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
+  if (!slug) {
+    return sendError(res, 'Game slug is required', 'VALIDATION_ERROR', 400);
+  }
   const game = await prisma.game.findUnique({
-    where: { slug: req.params.slug },
+    where: { slug },
     include: { category: true },
   });
-  if (!game || !game.isActive || !game.category.isActive) {
+  if (!game || !game.isActive || !(game as any).category?.isActive) {
     return sendError(res, 'Game not found', 'NOT_FOUND', 404);
   }
   res.setHeader('Cache-Control', 'no-store');
@@ -133,9 +137,12 @@ const getCategory = async (slug: string) => {
 };
 
 // Prisma MongoDB ObjectId queries reject ordinary slugs as invalid IDs.
-const gameLookup = (value: string) => /^[a-f0-9]{24}$/i.test(value)
-  ? { OR: [{ id: value }, { slug: value }] }
-  : { slug: value };
+const gameLookup = (value: string | string[] | undefined) => {
+  const val = Array.isArray(value) ? value[0] : (value || '');
+  return /^[a-f0-9]{24}$/i.test(val)
+    ? { OR: [{ id: val }, { slug: val }] }
+    : { slug: val };
+};
 
 export const createGame = async (req: Request, res: Response) => {
   const parsed = gameCreateSchema.safeParse(req.body);
