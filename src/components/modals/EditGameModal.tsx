@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Gamepad2, Sparkles, Link as LinkIcon, Check, Image as ImageIcon } from 'lucide-react';
 import type { Game } from '../../types';
-import { apiRequest, localStore } from '../../lib/apiClient';
+import { apiRequest } from '../../lib/apiClient';
 import { toast } from 'sonner';
 
 interface EditGameModalProps {
@@ -29,6 +29,7 @@ export const EditGameModal: React.FC<EditGameModalProps> = ({
     maxBet: 500.0,
     status: 'HOT' as 'HOT' | 'NEW' | 'POPULAR' | 'DEFAULT',
     isFeatured: true,
+    isActive: false,
   });
   const [loading, setLoading] = useState(false);
 
@@ -46,6 +47,7 @@ export const EditGameModal: React.FC<EditGameModalProps> = ({
         maxBet: game.maxBet ?? 500.0,
         status: (game.status as any) || 'HOT',
         isFeatured: game.isFeatured ?? true,
+        isActive: game.isActive ?? false,
       });
     }
   }, [game, isOpen]);
@@ -84,34 +86,34 @@ export const EditGameModal: React.FC<EditGameModalProps> = ({
       status: formData.status,
       tag: formData.status,
       isFeatured: formData.isFeatured,
+      isActive: formData.isActive,
     };
 
     try {
-      // 1. Update in localStore immediately
-      const idx = localStore.games.findIndex((g) => g.id === game.id);
-      if (idx !== -1) {
-        localStore.games[idx] = updatedGame;
-      } else {
-        localStore.games.unshift(updatedGame);
-      }
-      localStore.save();
-
-      // 2. Call backend update endpoint
-      await apiRequest(`/games/${game.id}`, {
+      // Never report success or mutate local storage unless the real API confirms.
+      const saved = await apiRequest<Game>(`/games/${game.id}`, {
         method: 'PUT',
-        body: JSON.stringify(updatedGame),
-      });
-
-      // 3. Notify parent component
-      onGameUpdated(updatedGame);
-      toast.success(`Game "${updatedGame.name}" updated successfully!`);
+        body: JSON.stringify({
+          name: updatedGame.name,
+          categorySlug: updatedGame.categorySlug,
+          provider: updatedGame.provider,
+          thumbnail: updatedGame.thumbnail,
+          banner: updatedGame.banner,
+          gameUrl: updatedGame.gameUrl || null,
+          minBet: updatedGame.minBet,
+          maxBet: updatedGame.maxBet,
+          status: updatedGame.status,
+          tag: updatedGame.tag,
+          isFeatured: updatedGame.isFeatured,
+          isActive: updatedGame.isActive,
+        }),
+      }, { auth: 'admin', fallback: false, timeoutMs: 8000 });
+      onGameUpdated(saved);
+      toast.success(`Game "${saved.name}" updated on the server.`);
       onClose();
     } catch (err) {
-      console.warn('Backend update note:', err);
-      // Fallback update was already saved in localStore
-      onGameUpdated(updatedGame);
-      toast.success(`Game "${updatedGame.name}" saved!`);
-      onClose();
+      console.warn('Backend game update failed:', err);
+      toast.error('Update was not saved. Backend admin authentication is required.');
     } finally {
       setLoading(false);
     }
@@ -289,6 +291,10 @@ export const EditGameModal: React.FC<EditGameModalProps> = ({
             </div>
           </div>
 
+          <label className="flex items-center gap-2 text-xs text-white">
+            <input type="checkbox" checked={formData.isActive} onChange={e => setFormData({ ...formData, isActive: e.target.checked })} className="accent-[#7B22FF]" />
+            Active in public gaming lobby (requires a valid HTTPS launch URL)
+          </label>
           {/* Action Buttons */}
           <div className="pt-3 flex items-center gap-2">
             <button

@@ -4,7 +4,12 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting database seed...');
+  // This legacy demo seed modifies employee wallets, sessions and user records.
+  // It must never be used as a production game-catalogue migration.
+  if (process.env.NODE_ENV === 'production' || !process.argv.includes('--demo-only')) {
+    throw new Error('Legacy demo seed refused. Use npm run prisma:seed:games for safe game-only initialization. Dev demo requires --demo-only and NODE_ENV != production.');
+  }
+  console.log('🌱 Starting DEMO-ONLY database seed...');
 
   // 1. Create Company
   const company = await prisma.company.upsert({
@@ -206,8 +211,7 @@ async function main() {
     categoryMap.set(cat.slug, record.id);
   }
 
-  // Clear out old games to ensure clean synchronization
-  await prisma.game.deleteMany({});
+  // Preserve games and activation state; never wipe the catalogue.
 
   // 9. Seed All 10 Games (5 Vercel Games + 5 Original Classic Games)
   const games = [

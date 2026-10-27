@@ -1,6 +1,8 @@
 import type { User, Wallet, GamingWallet, WalletTransaction, Game, GameCategory, Product, Order, NotificationItem, BannerItem, UserSession, UserActivity } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1';
+// Set VITE_API_URL to the deployed backend URL at build time. The same-origin
+// default needs a reverse proxy for /api/v1 in production (see PATCH1_GAMING_FIX.md).
+const API_BASE = (import.meta.env.VITE_API_URL?.trim() || '/api/v1').replace(/\/+$/, '');
 
 // Initial Mock / Seed State for robust frontend resilience
 const initialEmployee = {
@@ -132,7 +134,7 @@ const initialTransactions: WalletTransaction[] = [
   },
 ];
 
-const initialGameCategories: GameCategory[] = [
+export const initialGameCategories: GameCategory[] = [
   { id: 'cat-1', name: 'All Games', slug: 'all', icon: 'Sparkles', sortOrder: 0 },
   { id: 'cat-2', name: 'Arcade', slug: 'arcade', icon: 'Gamepad2', sortOrder: 1 },
   { id: 'cat-3', name: 'Action', slug: 'action', icon: 'Flame', sortOrder: 2 },
@@ -143,7 +145,7 @@ const initialGameCategories: GameCategory[] = [
   { id: 'cat-8', name: 'Dice', slug: 'dice', icon: 'Dice5', sortOrder: 7 },
 ];
 
-const initialGames: Game[] = [
+export const initialGames: Game[] = [
   // 5 Vercel Games with Official Game Artworks
   {
     id: 'g-pinball',
@@ -664,7 +666,13 @@ class LocalStore {
     this.notifications = savedNotifs ? JSON.parse(savedNotifs) : initialNotifications;
 
     const savedGames = localStorage.getItem('workpay_games_v6');
-    this.games = savedGames ? JSON.parse(savedGames) : initialGames;
+    // Corrupt/stale localStorage must not prevent the entire application booting.
+    try {
+      const parsed: unknown = savedGames ? JSON.parse(savedGames) : null;
+      this.games = Array.isArray(parsed) ? parsed : [...initialGames];
+    } catch {
+      this.games = [...initialGames];
+    }
 
     const savedProducts = localStorage.getItem('workpay_products');
     this.products = savedProducts ? JSON.parse(savedProducts) : initialProducts;
@@ -710,30 +718,87 @@ class LocalStore {
 
 export const localStore = new LocalStore();
 
-// Universal API Client with automatic fallback to local store if backend server is unreachable
-export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('workpay_token');
+// Display-only fallback: never overwrites persisted changes or marks games live.
+// An old "[]" from localStorage must not leave the Gaming Arena blank.
+export function getFallbackGames(): Game[] {
+  const saved = Array.isArray(localStore.games)
+    ? localStore.games.filter((value): value is Game => isDisplayableGame(value) && !!value.gameUrl && /^https:\/\//i.test(value.gameUrl))
+    : [];
+  return saved.length > 0 ? saved : initialGames.filter(g => !!g.gameUrl);
+}
+
+export function isDisplayableGame(value: unknown): value is Game {
+  if (!value || typeof value !== 'object') return false;
+  const game = value as Partial<Game>;
+  return typeof game.id === 'string' && game.id.length > 0 &&
+    typeof game.name === 'string' && game.name.length > 0 &&
+    typeof game.provider === 'string' &&
+    typeof game.categorySlug === 'string' &&
+    typeof game.thumbnail === 'string' &&
+    typeof game.minBet === 'number' && Number.isFinite(game.minBet);
+}
+
+export interface ApiRequestSettings {
+  // Explicitly opt in for time-sensitive GETs such as the catalogue.
+  timeoutMs?: number;
+  // Opt out of silent local mocks when we must distinguish online from preview.
+  fallback?: boolean;
+  // Admin JWT is separate from the employee session token.
+  auth?: 'user' | 'admin';
+}
+
+
+// Legacy local fallback remains the default for existing screens. Catalogue
+// callers use { fallback: false } so they can show an honest preview state.
+export async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  settings: ApiRequestSettings = {},
+): Promise<T> {
+  const token = localStorage.getItem(settings.auth === 'admin' ? 'workpay_admin_token' : 'workpay_token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...((options.headers as any) || {}),
+    ...((options.headers as Record<string, string>) || {}),
   };
+  const timeoutMs = settings.timeoutMs ?? 0;
+  const controller = timeoutMs > 0 ? new AbortController() : null;
+  const abort = () => controller?.abort();
+  if (controller && options.signal) {
+    if (options.signal.aborted) controller.abort();
+    else options.signal.addEventListener('abort', abort, { once: true });
+  }
+  const timer = controller ? setTimeout(abort, timeoutMs) : null;
 
   try {
     const res = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
       headers,
+      signal: controller?.signal ?? options.signal,
     });
-
-    if (res.ok) {
-      const json = await res.json();
-      return json.data as T;
+    if (!res.ok) {
+      throw new Error(`API request ${endpoint} returned HTTP ${res.status}`);
     }
+    // SPA hosting may return index.html (200) for an unconfigured API route.
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json') && !contentType.includes('+json')) {
+      throw new Error(`API request ${endpoint} returned non-JSON content`);
+    }
+    const json = await res.json();
+    if (!json || json.success === false || !('data' in json)) {
+      throw new Error(`API request ${endpoint} returned an invalid response`);
+    }
+    return json.data as T;
   } catch (error) {
-    // Network failure / server not running: use instant simulated response
+    // Never treat admin operations or game updates as successful local mutations.
+    const privileged = endpoint.startsWith('/admin') || endpoint.startsWith('/games/admin') ||
+      (endpoint.startsWith('/games') && !!options.method && options.method.toUpperCase() !== 'GET');
+    if (settings.fallback === false || privileged) throw error;
+    return fallbackLocalHandler(endpoint, options) as Promise<T>;
+  } finally {
+    if (timer !== null) clearTimeout(timer);
+    if (controller && options.signal) options.signal.removeEventListener('abort', abort);
   }
-
-  return fallbackLocalHandler(endpoint, options) as Promise<T>;
 }
 
 // Fallback handler providing 100% working interactions locally
@@ -957,7 +1022,7 @@ async function fallbackLocalHandler(endpoint: string, options: RequestInit = {})
     return { success: false, message: 'Game not found' };
   }
 
-  if (endpoint === '/game-categories') {
+  if (endpoint === '/game-categories' || endpoint === '/games/categories') {
     return initialGameCategories;
   }
 

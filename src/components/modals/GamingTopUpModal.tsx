@@ -39,21 +39,13 @@ export const GamingTopUpModal: React.FC<GamingTopUpModalProps> = ({
     setLoading(true);
     try {
       if (source === 'razorpay') {
-        // Direct Razorpay gateway deposit
-        await apiRequest('/wallet/add-money', {
-          method: 'POST',
-          body: JSON.stringify({ amount, paymentMethod: 'RAZORPAY_GAMING' }),
-        });
-        await apiRequest('/gaming-wallet/top-up', {
-          method: 'POST',
-          body: JSON.stringify({ amount, source: 'razorpay' }),
-        });
-        toast.success(`MYR ${amount.toFixed(2)} added to Gaming Wallet via Razorpay!`);
+        toast.error('Razorpay top-up is not connected to a verified payment gateway. Use Main Wallet.');
+        return;
       } else {
         await apiRequest('/gaming-wallet/top-up', {
           method: 'POST',
           body: JSON.stringify({ amount, source: 'main_wallet' }),
-        });
+        }, { fallback: false, timeoutMs: 10000 });
         toast.success(`MYR ${amount.toFixed(2)} transferred from Main Wallet!`);
       }
       onSuccess();
@@ -113,6 +105,8 @@ export const GamingTopUpModal: React.FC<GamingTopUpModalProps> = ({
 
               <button
                 type="button"
+                disabled
+                title="Payment gateway is not connected"
                 onClick={() => setSource('razorpay')}
                 className={`p-3 rounded-xl text-left border transition-all ${
                   source === 'razorpay'
@@ -127,7 +121,7 @@ export const GamingTopUpModal: React.FC<GamingTopUpModalProps> = ({
                   {source === 'razorpay' && <CheckCircle2 size={14} className="text-[#3395FF]" />}
                 </div>
                 <p className="text-xs font-bold text-white">Razorpay</p>
-                <p className="text-[10px] text-[#3395FF]">UPI / NetBanking</p>
+                <p className="text-[10px] text-amber-300">Not connected</p>
               </button>
             </div>
           </div>

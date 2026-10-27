@@ -10,10 +10,18 @@
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed-games.ts --apply",
+    "prisma:seed:games": "tsx prisma/seed-games.ts --apply",
+    "prisma:seed:games:check": "tsx prisma/seed-games.ts",
+    "prisma:seed:demo": "tsx prisma/seed.ts --demo-only",
+    "admin:check": "tsx scripts/admin-account.ts",
+    "admin:provision": "tsx scripts/admin-account.ts --apply",
+    "admin:rotate": "tsx scripts/admin-account.ts --apply --rotate",
+    "test:catalog": "node tests/catalogue.qa.cjs",
+    "test:integration": "node tests/integration.qa.cjs"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed-games.ts --apply"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",

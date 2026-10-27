@@ -1,212 +1,209 @@
 import { Request, Response } from 'express';
+import { GameBadge } from '@prisma/client';
+import { z } from 'zod';
 import { prisma } from '../../config/prisma';
 import { sendSuccess, sendError } from '../../utils/response';
 
-export const getGameCategories = async (req: Request, res: Response) => {
+// The public catalogue deliberately exposes only active games from active categories.
+// Preview games with no launch URL can be created for testing, but should remain inactive.
+const gameCreateSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  categorySlug: z.string().trim().min(1).max(100).optional(),
+  category: z.string().trim().min(1).max(100).optional(),
+  provider: z.string().trim().min(1).max(120).optional(),
+  thumbnail: z.string().trim().min(1).max(2048).optional(),
+  banner: z.string().trim().max(2048).nullable().optional(),
+  gameUrl: z.union([z.string().trim().max(2048).refine(v => v === '' || /^https:\/\//i.test(v), 'Game launch URL must use HTTPS'), z.null()]).optional(),
+  minBet: z.number().finite().nonnegative().optional(),
+  maxBet: z.number().finite().nonnegative().optional(),
+  status: z.nativeEnum(GameBadge).optional(),
+  tag: z.string().max(60).nullable().optional(),
+  isFeatured: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+}).strict();
+const gameUpdateSchema = gameCreateSchema.partial();
+
+const formatGame = (g: any) => ({
+  id: g.id,
+  name: g.name,
+  slug: g.slug,
+  category: g.category.name,
+  categorySlug: g.category.slug,
+  provider: g.provider,
+  thumbnail: g.thumbnail,
+  banner: g.banner || g.thumbnail,
+  gameUrl: g.gameUrl || undefined,
+  minBet: Number(g.minBet),
+  maxBet: Number(g.maxBet),
+  status: g.status,
+  tag: g.tag,
+  isFeatured: g.isFeatured,
+  isActive: g.isActive,
+});
+
+const gameSort: any = [{ isFeatured: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }];
+const getQuery = (value: unknown): string | undefined => typeof value === 'string' ? value.trim() : undefined;
+
+export const getGameCategories = async (_req: Request, res: Response) => {
   const categories = await prisma.gameCategory.findMany({
     where: { isActive: true },
-    orderBy: { sortOrder: 'asc' },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
   });
-
+  res.setHeader('Cache-Control', 'no-store');
   return sendSuccess(res, categories, 'Game categories retrieved successfully');
 };
 
 export const getGames = async (req: Request, res: Response) => {
-  const search = req.query.search as string;
-  const categorySlug = req.query.category as string;
-  const featuredOnly = req.query.featured === 'true';
-
-  const whereClause: any = { isActive: true };
+  const search = getQuery(req.query.search);
+  const categorySlug = getQuery(req.query.category);
+  const featured = getQuery(req.query.featured);
+  const where: any = { isActive: true, category: { isActive: true } };
 
   if (categorySlug && categorySlug !== 'all') {
-    const cat = await prisma.gameCategory.findUnique({ where: { slug: categorySlug } });
-    if (cat) {
-      whereClause.categoryId = cat.id;
+    const category = await prisma.gameCategory.findUnique({ where: { slug: categorySlug } });
+    if (!category || !category.isActive) {
+      res.setHeader('Cache-Control', 'no-store');
+      return sendSuccess(res, [], 'No active games in this category');
     }
+    where.categoryId = category.id;
   }
-
-  if (search) {
-    whereClause.name = { contains: search, mode: 'insensitive' };
-  }
-
-  if (featuredOnly) {
-    whereClause.isFeatured = true;
-  }
+  if (search) where.name = { contains: search, mode: 'insensitive' };
+  if (featured === 'true') where.isFeatured = true;
 
   const games = await prisma.game.findMany({
-    where: whereClause,
+    where,
     include: { category: true },
-    orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }],
+    orderBy: gameSort,
   });
+  res.setHeader('Cache-Control', 'no-store');
+  return sendSuccess(res, games.map(formatGame), 'Games retrieved successfully');
+};
 
-  const formatted = games.map((g) => ({
-    id: g.id,
-    name: g.name,
-    slug: g.slug,
-    category: g.category.name,
-    categorySlug: g.category.slug,
-    provider: g.provider,
-    thumbnail: g.thumbnail,
-    banner: g.banner || g.thumbnail,
-    gameUrl: g.gameUrl || undefined,
-    minBet: Number(g.minBet),
-    maxBet: Number(g.maxBet),
-    status: g.status,
-    tag: g.tag,
-    isFeatured: g.isFeatured,
-  }));
+// Admin-only state, including inactive / missing-launch-URL games, for QA.
+export const getManagedGames = async (_req: Request, res: Response) => {
+  const games = await prisma.game.findMany({ include: { category: true }, orderBy: gameSort });
+  res.setHeader('Cache-Control', 'no-store');
+  return sendSuccess(res, games.map(formatGame), 'Managed games retrieved successfully');
+};
 
-  return sendSuccess(res, formatted, 'Games retrieved successfully');
+// Lightweight public readiness check to distinguish an empty DB from a broken frontend.
+export const getGamesStatus = async (_req: Request, res: Response) => {
+  const [activeGames, totalGames, activeCategories] = await Promise.all([
+    prisma.game.count({ where: { isActive: true, category: { isActive: true } } }),
+    prisma.game.count(),
+    prisma.gameCategory.count({ where: { isActive: true } }),
+  ]);
+  res.setHeader('Cache-Control', 'no-store');
+  return sendSuccess(res, { state: 'ready', activeGames, totalGames, activeCategories }, 'Catalogue database reachable');
+};
+
+export const getGamesDiagnostics = async (_req: Request, res: Response) => {
+  const [categories, games] = await Promise.all([
+    prisma.gameCategory.findMany({ select: { id: true, slug: true, isActive: true } }),
+    prisma.game.findMany({ select: { slug: true, gameUrl: true, isActive: true, categoryId: true } }),
+  ]);
+  const categoriesById = new Map(categories.map(c => [c.id, c]));
+  const invisible = games.filter(g => !g.isActive || !categoriesById.get(g.categoryId)?.isActive);
+  const noUrl = games.filter(g => !g.gameUrl);
+  res.setHeader('Cache-Control', 'no-store');
+  return sendSuccess(res, {
+    totalGames: games.length,
+    visibleGames: games.length - invisible.length,
+    hiddenSlugs: invisible.map(g => g.slug),
+    missingLaunchUrlSlugs: noUrl.map(g => g.slug),
+    inactiveCategorySlugs: categories.filter(c => !c.isActive).map(c => c.slug),
+  }, 'Catalogue diagnostics');
 };
 
 export const getGameBySlug = async (req: Request, res: Response) => {
-  const slug = req.params.slug as string;
   const game = await prisma.game.findUnique({
-    where: { slug },
+    where: { slug: req.params.slug },
     include: { category: true },
   });
-
-  if (!game || !game.isActive) {
+  if (!game || !game.isActive || !game.category.isActive) {
     return sendError(res, 'Game not found', 'NOT_FOUND', 404);
   }
-
-  return sendSuccess(res, {
-    id: game.id,
-    name: game.name,
-    slug: game.slug,
-    category: game.category.name,
-    categorySlug: game.category.slug,
-    provider: game.provider,
-    thumbnail: game.thumbnail,
-    banner: game.banner || game.thumbnail,
-    gameUrl: game.gameUrl || undefined,
-    minBet: Number(game.minBet),
-    maxBet: Number(game.maxBet),
-    status: game.status,
-    tag: game.tag,
-    isFeatured: game.isFeatured,
-    description: `Experience premier entertainment with ${game.name}. Smooth graphics, certified RNG, and high payout rate.`,
-  });
+  res.setHeader('Cache-Control', 'no-store');
+  return sendSuccess(res, formatGame(game));
 };
 
+const getCategory = async (slug: string) => {
+  return prisma.gameCategory.findUnique({ where: { slug } });
+};
+
+// Prisma MongoDB ObjectId queries reject ordinary slugs as invalid IDs.
+const gameLookup = (value: string) => /^[a-f0-9]{24}$/i.test(value)
+  ? { OR: [{ id: value }, { slug: value }] }
+  : { slug: value };
+
 export const createGame = async (req: Request, res: Response) => {
-  const { name, categorySlug, provider, thumbnail, banner, gameUrl, minBet, maxBet, status, tag, isFeatured } = req.body;
-  if (!name) return sendError(res, 'Game name is required', 'VALIDATION_ERROR', 400);
-
-  const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;
-  let category = await prisma.gameCategory.findFirst({
-    where: { slug: categorySlug || 'slots' },
-  });
-  if (!category) {
-    category = await prisma.gameCategory.findFirst();
+  const parsed = gameCreateSchema.safeParse(req.body);
+  if (!parsed.success) return sendError(res, 'Invalid game data', 'VALIDATION_ERROR', 400, parsed.error.flatten());
+  const value = parsed.data;
+  const slug = (value.categorySlug || value.category || 'slots').toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+  const category = await getCategory(slug);
+  if (!category) return sendError(res, 'Category does not exist. Run the game catalogue bootstrap.', 'CATEGORY_NOT_FOUND', 400);
+  if (value.minBet !== undefined && value.maxBet !== undefined && value.minBet > value.maxBet) {
+    return sendError(res, 'minBet cannot exceed maxBet', 'VALIDATION_ERROR', 400);
   }
-
-  const newGame = await prisma.game.create({
+  if (value.isActive === true && !value.gameUrl) {
+    return sendError(res, 'Cannot activate a game without a launch URL', 'VALIDATION_ERROR', 400);
+  }
+  const game = await prisma.game.create({
     data: {
-      name,
-      slug,
-      categoryId: category!.id,
-      provider: provider || 'WorkPlay Originals',
-      thumbnail: thumbnail || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400',
-      banner: banner || thumbnail,
-      gameUrl: gameUrl || null,
-      minBet: Number(minBet) || 1.0,
-      maxBet: Number(maxBet) || 500.0,
-      status: (status as any) || 'HOT',
-      tag: tag || 'HOT',
-      isFeatured: isFeatured ?? true,
-      isActive: true,
+      name: value.name,
+      slug: `${value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'game'}-${Date.now()}`,
+      categoryId: category.id,
+      provider: value.provider || 'WorkPlay Originals',
+      thumbnail: value.thumbnail || '/assets/games/pinball.jpg',
+      banner: value.banner || value.thumbnail || null,
+      gameUrl: value.gameUrl || null,
+      minBet: value.minBet ?? 1,
+      maxBet: value.maxBet ?? 500,
+      status: value.status || GameBadge.DEFAULT,
+      tag: value.tag || null,
+      isFeatured: value.isFeatured ?? false,
+      // Do not publish entries without an actual launch URL by default.
+      isActive: value.isActive ?? Boolean(value.gameUrl),
+      sortOrder: value.sortOrder ?? 0,
     },
     include: { category: true },
   });
-
-  return sendSuccess(res, {
-    id: newGame.id,
-    name: newGame.name,
-    slug: newGame.slug,
-    category: newGame.category.name,
-    categorySlug: newGame.category.slug,
-    provider: newGame.provider,
-    thumbnail: newGame.thumbnail,
-    banner: newGame.banner,
-    gameUrl: newGame.gameUrl || undefined,
-    minBet: Number(newGame.minBet),
-    maxBet: Number(newGame.maxBet),
-    status: newGame.status,
-    tag: newGame.tag,
-    isFeatured: newGame.isFeatured,
-  }, 'Game created successfully', 201);
+  return sendSuccess(res, formatGame(game), 'Game created successfully', 201);
 };
 
 export const updateGame = async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id as string;
-    const { name, categorySlug, provider, thumbnail, banner, gameUrl, minBet, maxBet, status, tag, isFeatured } = req.body;
-
-    const dataToUpdate: any = {};
-    if (name !== undefined) dataToUpdate.name = name;
-    if (provider !== undefined) dataToUpdate.provider = provider;
-    if (thumbnail !== undefined) dataToUpdate.thumbnail = thumbnail;
-    if (banner !== undefined) dataToUpdate.banner = banner;
-    if (gameUrl !== undefined) dataToUpdate.gameUrl = gameUrl;
-    if (minBet !== undefined) dataToUpdate.minBet = Number(minBet);
-    if (maxBet !== undefined) dataToUpdate.maxBet = Number(maxBet);
-    if (status !== undefined) dataToUpdate.status = status;
-    if (tag !== undefined) dataToUpdate.tag = tag;
-    if (isFeatured !== undefined) dataToUpdate.isFeatured = isFeatured;
-
-    if (categorySlug) {
-      const category = await prisma.gameCategory.findFirst({
-        where: { slug: categorySlug },
-      });
-      if (category) {
-        dataToUpdate.categoryId = category.id;
-      }
-    }
-
-    const updated = await prisma.game.update({
-      where: { id },
-      data: dataToUpdate,
-      include: { category: true },
-    });
-
-    return sendSuccess(res, {
-      id: updated.id,
-      name: updated.name,
-      slug: updated.slug,
-      category: updated.category.name,
-      categorySlug: updated.category.slug,
-      provider: updated.provider,
-      thumbnail: updated.thumbnail,
-      banner: updated.banner,
-      gameUrl: updated.gameUrl || undefined,
-      minBet: Number(updated.minBet),
-      maxBet: Number(updated.maxBet),
-      status: updated.status,
-      tag: updated.tag,
-      isFeatured: updated.isFeatured,
-    }, 'Game updated successfully');
-  } catch (err: any) {
-    console.error('Update game error:', err);
-    return sendError(res, 'Failed to update game', 'INTERNAL_ERROR', 500);
+  const parsed = gameUpdateSchema.safeParse(req.body);
+  if (!parsed.success) return sendError(res, 'Invalid game data', 'VALIDATION_ERROR', 400, parsed.error.flatten());
+  const value = parsed.data;
+  const existing = await prisma.game.findFirst({ where: gameLookup(req.params.id) });
+  if (!existing) return sendError(res, 'Game not found', 'NOT_FOUND', 404);
+  const slug = value.categorySlug || value.category;
+  let categoryId: string | undefined;
+  if (slug) {
+    const category = await getCategory(slug.toLowerCase().replace(/[^a-z0-9-]+/g, '-'));
+    if (!category) return sendError(res, 'Game category not found', 'CATEGORY_NOT_FOUND', 400);
+    categoryId = category.id;
   }
+  const minBet = value.minBet ?? existing.minBet;
+  const maxBet = value.maxBet ?? existing.maxBet;
+  if (minBet > maxBet) return sendError(res, 'minBet cannot exceed maxBet', 'VALIDATION_ERROR', 400);
+  if (value.isActive === true && !(value.gameUrl ?? existing.gameUrl)) {
+    return sendError(res, 'Cannot activate a game without a launch URL', 'VALIDATION_ERROR', 400);
+  }
+  const { category: _category, categorySlug: _categorySlug, ...updateFields } = value;
+  const data: any = { ...updateFields };
+  if (categoryId) data.categoryId = categoryId;
+  // Keep slug stable to avoid breaking existing external references.
+  const updated = await prisma.game.update({ where: { id: existing.id }, data, include: { category: true } });
+  return sendSuccess(res, formatGame(updated), 'Game updated successfully');
 };
 
+// Soft delete: preserve records and avoid destructive changes to a live catalogue.
 export const deleteGame = async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id as string;
-    await prisma.game.deleteMany({
-      where: {
-        OR: [
-          { id },
-          { slug: id },
-        ],
-      },
-    });
-    return sendSuccess(res, null, 'Game deleted successfully');
-  } catch (err: any) {
-    console.error('Delete game error:', err);
-    return sendSuccess(res, null, 'Game removed');
-  }
+  const existing = await prisma.game.findFirst({ where: gameLookup(req.params.id) });
+  if (!existing) return sendError(res, 'Game not found', 'NOT_FOUND', 404);
+  await prisma.game.update({ where: { id: existing.id }, data: { isActive: false } });
+  return sendSuccess(res, { id: existing.id, isActive: false }, 'Game deactivated successfully');
 };
-

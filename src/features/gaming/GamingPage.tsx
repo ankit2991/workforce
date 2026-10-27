@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Gamepad2,
   PlusCircle,
@@ -10,8 +10,10 @@ import {
   History,
   Play,
   RotateCw,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
-import { apiRequest, localStore } from '../../lib/apiClient';
+import { apiRequest, getFallbackGames, initialGameCategories, isDisplayableGame } from '../../lib/apiClient';
 import type { Game, GameCategory, GamingWallet, Wallet } from '../../types';
 import { GamingTopUpModal } from '../../components/modals/GamingTopUpModal';
 import { GamingCashOutModal } from '../../components/modals/GamingCashOutModal';
@@ -23,6 +25,10 @@ export const GamingPage: React.FC = () => {
   const [categories, setCategories] = useState<GameCategory[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
+  const [catalogMode, setCatalogMode] = useState<'live' | 'preview' | null>(null);
+  const [catalogIssue, setCatalogIssue] = useState('');
+  const [walletStatus, setWalletStatus] = useState<'loading' | 'available' | 'unavailable'>('loading');
+  const latestLoad = useRef(0);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'GAMES' | 'HISTORY'>('GAMES');
@@ -34,46 +40,74 @@ export const GamingPage: React.FC = () => {
   const [selectedGameToPlay, setSelectedGameToPlay] = useState<Game | null>(null);
 
   const fetchData = async () => {
+    const loadId = ++latestLoad.current;
     setLoading(true);
-    try {
-      const [gWalletRes, mWalletRes, catsRes, gamesRes]: any = await Promise.all([
-        apiRequest('/gaming-wallet'),
-        apiRequest('/wallet'),
-        apiRequest('/games/categories'),
-        apiRequest('/games'),
-      ]);
+    setWalletStatus('loading');
 
-      if (gWalletRes) setGamingWallet(gWalletRes);
-      if (mWalletRes) setMainWallet(mWalletRes);
-      if (catsRes && Array.isArray(catsRes) && catsRes.length > 0) {
-        setCategories(catsRes);
-      }
-      if (gamesRes && Array.isArray(gamesRes) && gamesRes.length > 0) {
-        setGames(gamesRes);
-      } else {
-        // Fallback to localStore games if backend returns empty
-        setGames(localStore.games);
-      }
-    } catch (err) {
-      console.error('Error fetching games data:', err);
-      // Resilience fallback
-      setGames(localStore.games);
-    } finally {
-      setLoading(false);
+    // Wallet responses are independent: slow wallets never hold up the games grid.
+    void Promise.allSettled([
+      apiRequest<GamingWallet>('/gaming-wallet', {}, { fallback: false, timeoutMs: 5000 }),
+      apiRequest<Wallet>('/wallet', {}, { fallback: false, timeoutMs: 5000 }),
+    ]).then(([gamingWalletResult, walletResult]) => {
+      if (loadId !== latestLoad.current) return;
+      const gamingOk = gamingWalletResult.status === 'fulfilled' &&
+        typeof gamingWalletResult.value?.balance === 'number';
+      const walletOk = walletResult.status === 'fulfilled' &&
+        typeof walletResult.value?.availableBalance === 'number';
+      setGamingWallet(gamingOk ? gamingWalletResult.value : null);
+      setMainWallet(walletOk ? walletResult.value : null);
+      setWalletStatus(gamingOk && walletOk ? 'available' : 'unavailable');
+    });
+
+    // Explicit timeout and independent results for games / categories.
+    const [gameResult, categoryResult] = await Promise.allSettled([
+      apiRequest<Game[]>('/games', {}, { fallback: false, timeoutMs: 8000 }),
+      apiRequest<GameCategory[]>('/games/categories', {}, { fallback: false, timeoutMs: 8000 }),
+    ]);
+    if (loadId !== latestLoad.current) return;
+
+    const serverGames = gameResult.status === 'fulfilled' && Array.isArray(gameResult.value)
+      ? gameResult.value.filter(isDisplayableGame)
+      : [];
+    if (serverGames.length > 0) {
+      setGames(serverGames);
+      setCatalogMode('live');
+      setCatalogIssue('');
+    } else {
+      // Preview entries are never persisted as "server published" games.
+      // An empty server catalogue is different from a failed API request.
+      setGames(getFallbackGames());
+      setCatalogMode('preview');
+      setCatalogIssue(
+        gameResult.status === 'fulfilled'
+          ? 'The server returned no active games. Displaying local preview entries instead.'
+          : 'Unable to reach the live games API. Check the deployed VITE_API_URL or /api/v1 reverse proxy. Displaying local preview entries instead.',
+      );
     }
+
+    const serverCategories = categoryResult.status === 'fulfilled' &&
+      Array.isArray(categoryResult.value)
+      ? categoryResult.value.filter((item): item is GameCategory =>
+          !!item && typeof item.slug === 'string' && typeof item.name === 'string')
+      : [];
+    setCategories(serverCategories.length > 0 ? serverCategories.filter(c => c.slug !== 'all') : initialGameCategories.filter(c => c.slug !== 'all'));
+
+    setLoading(false);
   };
 
   const fetchHistory = async () => {
     try {
-      const histRes: any = await apiRequest('/gaming-wallet/history');
-      if (histRes) setHistory(histRes);
+      const histRes: any = await apiRequest('/gaming-wallet/transactions', {}, { fallback: false, timeoutMs: 8000 });
+      if (Array.isArray(histRes)) setHistory(histRes);
+      else setHistory([]);
     } catch (err) {
       console.error(err);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
+    return () => { latestLoad.current += 1; };
   }, []);
 
   useEffect(() => {
@@ -107,11 +141,11 @@ export const GamingPage: React.FC = () => {
               <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-200/80">
                 Gaming Wallet
               </span>
-              <p className="text-[10px] text-purple-300">Play & Win Instant Cash</p>
+              <p className="text-[10px] text-purple-300">Browse Interactive Games</p>
             </div>
           </div>
           <div className="px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-bold text-[#E0A7FF]">
-            PROVABLY FAIR
+            EXTERNAL GAMES
           </div>
         </div>
 
@@ -130,14 +164,16 @@ export const GamingPage: React.FC = () => {
         <div className="mt-4 pt-3 border-t border-white/10 grid grid-cols-2 gap-2 relative z-10">
           <button
             onClick={() => setShowTopUpModal(true)}
-            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#7B22FF] to-[#A83DF4] text-white font-bold text-xs hover:opacity-95 active:scale-[0.98] transition shadow-md shadow-[#7B22FF]/30"
+            disabled={walletStatus !== 'available'}
+            title={walletStatus !== 'available' ? 'Connect wallet API before making transactions' : undefined}
+            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#7B22FF] to-[#A83DF4] text-white font-bold text-xs hover:opacity-95 active:scale-[0.98] transition shadow-md shadow-[#7B22FF]/30 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <PlusCircle size={15} />
             Top Up
           </button>
           <button
             onClick={() => setShowCashOutModal(true)}
-            disabled={(gamingWallet?.balance ?? 0) <= 0}
+            disabled={walletStatus !== 'available' || (gamingWallet?.balance ?? 0) <= 0}
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white/10 border border-white/20 text-white font-bold text-xs hover:bg-white/20 active:scale-[0.98] transition disabled:opacity-40"
           >
             <ArrowDownRight size={15} className="text-[#00C982]" />
@@ -145,6 +181,12 @@ export const GamingPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {walletStatus === 'unavailable' && (
+        <div role="status" className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2">
+          Wallet API unavailable. Top-up and cash-out are disabled until the connection is restored.
+        </div>
+      )}
 
       {/* Navigation Tabs (Games / History) */}
       <div className="flex items-center bg-[#101B24] p-1 rounded-xl border border-[#172631]">
@@ -177,6 +219,18 @@ export const GamingPage: React.FC = () => {
 
       {activeTab === 'GAMES' ? (
         <>
+          {catalogMode === 'preview' && !loading && (
+            <div role="status" className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-100 flex gap-2.5 items-start">
+              <AlertTriangle size={18} className="shrink-0 mt-0.5 text-amber-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold">Preview catalogue — not confirmed live</p>
+                <p className="text-[11px] mt-1 text-amber-100/80">{catalogIssue} Wallet-backed play is unavailable until the backend is connected.</p>
+              </div>
+              <button onClick={() => void fetchData()} className="shrink-0 flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25" title="Retry loading live games">
+                <RefreshCw size={12} /> Retry
+              </button>
+            </div>
+          )}
           {/* Search bar */}
           <div className="relative">
             <Search
@@ -306,9 +360,11 @@ export const GamingPage: React.FC = () => {
 
                     <button
                       onClick={() => setSelectedGameToPlay(game)}
-                      className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#7B22FF] to-[#A83DF4] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-[#7B22FF]/20 hover:opacity-95 active:scale-[0.98] transition"
+                      disabled={!game.gameUrl || !/^https:\/\//i.test(game.gameUrl)}
+                      title={!game.gameUrl ? 'No configured launch URL' : undefined}
+                      className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#7B22FF] to-[#A83DF4] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-[#7B22FF]/20 hover:opacity-95 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      <Play size={13} fill="currentColor" /> Play Now
+                      <Play size={13} fill="currentColor" /> {!game.gameUrl ? 'Unavailable' : catalogMode === 'preview' ? 'Preview Game' : 'Play Now'}
                     </button>
                   </div>
                 </div>
@@ -328,11 +384,11 @@ export const GamingPage: React.FC = () => {
                 onClick={() => {
                   setSelectedCategory('all');
                   setSearchQuery('');
-                  setGames(localStore.games);
+                  void fetchData();
                 }}
                 className="px-4 py-2 rounded-xl bg-[#7B22FF] text-white text-xs font-bold shadow-md hover:opacity-90 transition"
               >
-                Reset & View All Games ({localStore.games.length})
+                Reset Filters & Retry
               </button>
             </div>
           )}
@@ -355,7 +411,7 @@ export const GamingPage: React.FC = () => {
                 className="p-3.5 rounded-2xl bg-[#101B24] border border-[#172631] flex items-center justify-between"
               >
                 <div>
-                  <p className="text-xs font-bold text-white">{tx.gameName || 'Game Spin'}</p>
+                  <p className="text-xs font-bold text-white">{(tx.type || 'TRANSACTION').replaceAll('_', ' ')}</p>
                   <p className="text-[10px] text-[#8493A1]">
                     {new Date(tx.createdAt || Date.now()).toLocaleTimeString()}
                   </p>
@@ -363,13 +419,13 @@ export const GamingPage: React.FC = () => {
                 <div className="text-right">
                   <p
                     className={`text-xs font-black ${
-                      tx.winAmount > 0 ? 'text-[#00C982]' : 'text-[#FF455B]'
+                      tx.type === 'TOP_UP' || tx.type === 'WIN' ? 'text-[#00C982]' : 'text-[#FF455B]'
                     }`}
                   >
-                    {tx.winAmount > 0 ? `+MYR ${tx.winAmount.toFixed(2)}` : `-MYR ${tx.betAmount.toFixed(2)}`}
+                    {`MYR ${Number(tx.amount ?? 0).toFixed(2)}`}
                   </p>
                   <span className="text-[9px] text-[#8493A1]">
-                    {tx.winAmount > 0 ? 'WON' : 'SETTLED'}
+                    {tx.status || 'COMPLETED'}
                   </span>
                 </div>
               </div>
@@ -383,7 +439,7 @@ export const GamingPage: React.FC = () => {
         isOpen={showTopUpModal}
         onClose={() => setShowTopUpModal(false)}
         onSuccess={fetchData}
-        mainWalletBalance={mainWallet?.availableBalance ?? 1200}
+        mainWalletBalance={mainWallet?.availableBalance ?? 0}
       />
       <GamingCashOutModal
         isOpen={showCashOutModal}
@@ -398,6 +454,7 @@ export const GamingPage: React.FC = () => {
         gamingBalance={gamingWallet?.balance ?? 0}
         onBalanceUpdate={fetchData}
         onOpenTopUp={() => setShowTopUpModal(true)}
+        isPreview={catalogMode !== 'live' || walletStatus !== 'available'}
       />
     </div>
   );

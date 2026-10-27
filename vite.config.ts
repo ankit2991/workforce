@@ -10,6 +10,13 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
     allowedHosts: true,
+    // Development-only proxy; production needs VITE_API_URL or an ingress proxy.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
+    },
     hmr: {
       overlay: false,
     },

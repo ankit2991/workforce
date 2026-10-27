@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { apiRequest } from "./lib/apiClient";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { DefaultProviders } from "./components/providers/default.tsx";
 import { useServiceWorker } from "@/hooks/use-service-worker.ts";
@@ -13,10 +15,26 @@ import { AdminLayout } from "./features/admin/AdminLayout";
 import { UserActivityQrView } from "./features/activity/UserActivityQrView";
 
 function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('workpay_admin_token');
-  if (!token) {
-    return <Navigate to="/admin/login" replace />;
-  }
+  const [status, setStatus] = useState<'checking' | 'authorized' | 'unauthorized'>('checking');
+  useEffect(() => {
+    let active = true;
+    const token = localStorage.getItem('workpay_admin_token');
+    if (!token) { setStatus('unauthorized'); return; }
+    void apiRequest<{ role: string }>('/auth/me', {}, { auth: 'admin', fallback: false, timeoutMs: 8000 })
+      .then(user => {
+        if (!active) return;
+        if (user && ['ADMIN', 'SUPER_ADMIN'].includes(user.role)) setStatus('authorized');
+        else { localStorage.removeItem('workpay_admin_token'); setStatus('unauthorized'); }
+      })
+      .catch(() => {
+        if (!active) return;
+        // Don't destroy a real session on transient API outages; refuse access until verified.
+        setStatus('unauthorized');
+      });
+    return () => { active = false; };
+  }, []);
+  if (status === 'checking') return <div role="status" className="min-h-screen bg-[#050B10] text-white flex items-center justify-center">Verifying administrator session…</div>;
+  if (status === 'unauthorized') return <Navigate to="/admin/login" replace />;
   return <>{children}</>;
 }
 

@@ -29,7 +29,7 @@ import {
   QrCode,
   Edit3,
 } from 'lucide-react';
-import { apiRequest, localStore } from '../../lib/apiClient';
+import { apiRequest } from '../../lib/apiClient';
 import type { Game, Product, User, UserActivity, UserSession } from '../../types';
 import { UserActivityQrModal } from '../../components/modals/UserActivityQrModal';
 import { EditGameModal } from '../../components/modals/EditGameModal';
@@ -43,6 +43,7 @@ export const AdminLayout: React.FC = () => {
 
   // Games & Products state
   const [games, setGames] = useState<Game[]>([]);
+  const [gameCatalogError, setGameCatalogError] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
   const [selectedUserActivity, setSelectedUserActivity] = useState<UserActivity | null>(null);
@@ -68,6 +69,7 @@ export const AdminLayout: React.FC = () => {
     maxBet: 500.0,
     status: 'HOT',
     isFeatured: true,
+    gameUrl: '',
   });
 
   // Add Product Form state
@@ -103,18 +105,21 @@ export const AdminLayout: React.FC = () => {
   ]);
 
   const fetchItems = async () => {
-    try {
-      const [gRes, pRes, uRes]: any = await Promise.all([
-        apiRequest('/games'),
-        apiRequest('/products'),
-        apiRequest('/admin/users/activity'),
-      ]);
-      if (gRes) setGames(gRes);
-      if (pRes) setProducts(pRes);
-      if (uRes) setUserActivities(uRes);
-    } catch (err) {
-      console.error(err);
+    // Never substitute locally mocked games for managed records from the database.
+    const [gameResult, productsResult, activityResult] = await Promise.allSettled([
+      apiRequest<Game[]>('/games/admin/catalog', {}, { auth: 'admin', fallback: false, timeoutMs: 8000 }),
+      apiRequest<Product[]>('/products', {}, { fallback: false, timeoutMs: 8000 }),
+      apiRequest<UserActivity[]>('/admin/users/activity', {}, { auth: 'admin', fallback: false, timeoutMs: 8000 }),
+    ]);
+    if (gameResult.status === 'fulfilled' && Array.isArray(gameResult.value)) {
+      setGames(gameResult.value);
+      setGameCatalogError('');
+    } else {
+      setGames([]);
+      setGameCatalogError('Could not load the live games catalogue. Verify database connectivity and your administrator session.');
     }
+    if (productsResult.status === 'fulfilled' && Array.isArray(productsResult.value)) setProducts(productsResult.value);
+    if (activityResult.status === 'fulfilled' && Array.isArray(activityResult.value)) setUserActivities(activityResult.value);
   };
 
   const formatDuration = (seconds: number) => {
@@ -148,7 +153,7 @@ export const AdminLayout: React.FC = () => {
 
     // Real-time polling every 6 seconds to update online status & active durations
     const interval = setInterval(() => {
-      apiRequest('/admin/users/activity')
+      apiRequest('/admin/users/activity', {}, { auth: 'admin', fallback: false, timeoutMs: 8000 })
         .then((uRes: any) => {
           if (uRes) setUserActivities(uRes);
         })
@@ -174,11 +179,11 @@ export const AdminLayout: React.FC = () => {
     }
     setLoading(true);
     try {
-      const created: any = await apiRequest('/games', {
+      await apiRequest('/games', {
         method: 'POST',
-        body: JSON.stringify(newGame),
-      });
-      toast.success(`Game "${newGame.name}" added successfully! Visible to users in Gaming Hub.`);
+        body: JSON.stringify({ ...newGame, categorySlug: newGame.category.toLowerCase().replace(/[^a-z0-9]+/g, '-') }),
+      }, { auth: 'admin', fallback: false, timeoutMs: 8000 });
+      toast.success(`Game "${newGame.name}" saved on the server. A valid launch URL and active status are required for public visibility.`);
       setShowAddGameModal(false);
       setNewGame({
         name: '',
@@ -189,32 +194,44 @@ export const AdminLayout: React.FC = () => {
         maxBet: 500.0,
         status: 'HOT',
         isFeatured: true,
+        gameUrl: '',
       });
       fetchItems();
     } catch (err) {
-      toast.error('Failed to create game');
+      toast.error('Game not saved. Confirm backend is online and your admin account is authenticated.');
     } finally {
       setLoading(false);
     }
   };
 
   // Delete Game handler
+  const handleToggleGame = async (game: Game) => {
+    if (!game.gameUrl && !game.isActive) {
+      toast.error('Add a valid HTTPS launch URL before activating this game.');
+      return;
+    }
+    try {
+      await apiRequest(`/games/${game.id}`, {
+        method: 'PATCH', body: JSON.stringify({ isActive: !game.isActive }),
+      }, { auth: 'admin', fallback: false, timeoutMs: 8000 });
+      await fetchItems();
+      toast.success(`Game ${game.isActive ? 'deactivated' : 'activated'} on the server.`);
+    } catch (error) {
+      toast.error('Could not update game status. Check admin permissions and API connection.');
+    }
+  };
+
   const handleDeleteGame = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to remove "${name}" from the games catalog?`)) return;
 
-    // 1. Optimistic removal from UI state immediately
-    setGames((prev) => prev.filter((g) => g.id !== id && g.slug !== id));
-
-    // 2. Remove from localStore and persist to localStorage
-    localStore.games = localStore.games.filter((g) => g.id !== id && g.slug !== id);
-    localStore.save();
-
+    // Soft-delete keeps the game in the admin catalogue for reactivation.
     try {
-      await apiRequest(`/games/${id}`, { method: 'DELETE' });
-      toast.success(`Game "${name}" deleted successfully!`);
+      await apiRequest(`/games/${id}`, { method: 'DELETE' }, { auth: 'admin', fallback: false, timeoutMs: 8000 });
+      await fetchItems();
+      toast.success(`Game "${name}" deactivated on the server.`);
     } catch (err) {
-      console.warn('Backend delete sync note:', err);
-      toast.success(`Game "${name}" removed from catalog!`);
+      console.warn('Game deactivation failed:', err);
+      toast.error('Could not deactivate game. Backend admin authentication is required.');
     }
   };
 
@@ -740,7 +757,7 @@ export const AdminLayout: React.FC = () => {
                 <div>
                   <h2 className="text-xl font-black text-white">Games Catalog Management</h2>
                   <p className="text-xs text-[#8493A1]">
-                    Add new games or remove existing ones. Any game added here will immediately appear in the User Gaming Hub!
+                    Only active games in active categories appear in the user Gaming Hub. Preview entries are hidden until activated.
                   </p>
                 </div>
                 <button
@@ -751,6 +768,7 @@ export const AdminLayout: React.FC = () => {
                 </button>
               </div>
 
+              {gameCatalogError && <div role="alert" className="p-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-200 text-xs">{gameCatalogError} <button onClick={() => void fetchItems()} className="underline font-bold ml-2">Retry</button></div>}
               {/* Games Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {games.map((g) => (
@@ -781,7 +799,9 @@ export const AdminLayout: React.FC = () => {
                       </div>
 
                       <div className="pt-2 border-t border-[#172631] flex items-center justify-between">
-                        <span className="text-[10px] text-[#00C982] font-semibold">Active in App</span>
+                        <button type="button" onClick={() => void handleToggleGame(g)} className={`text-[10px] font-semibold ${g.isActive ? 'text-[#00C982]' : 'text-amber-400'}`} title="Toggle game visibility">
+                          {g.isActive ? '● Active — Disable' : '○ Inactive — Enable'}
+                        </button>
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => {
@@ -797,10 +817,10 @@ export const AdminLayout: React.FC = () => {
                           <button
                             onClick={() => handleDeleteGame(g.id, g.name)}
                             className="p-1.5 px-2.5 rounded-lg bg-[#FF455B]/10 hover:bg-[#FF455B] text-[#FF455B] hover:text-white transition text-xs flex items-center gap-1 font-bold border border-[#FF455B]/30"
-                            title="Delete Game"
+                            title="Deactivate Game"
                           >
                             <Trash2 size={12} />
-                            <span className="text-[10px]">Delete</span>
+                            <span className="text-[10px]">Deactivate</span>
                           </button>
                         </div>
                       </div>
@@ -863,7 +883,7 @@ export const AdminLayout: React.FC = () => {
                           title="Delete Product"
                         >
                           <Trash2 size={13} />
-                          <span className="text-[10px]">Delete</span>
+                          <span className="text-[10px]">Deactivate</span>
                         </button>
                       </div>
                     </div>
@@ -1009,6 +1029,9 @@ export const AdminLayout: React.FC = () => {
                     <option value="Live Casino">Live Casino</option>
                     <option value="Crash">Crash</option>
                     <option value="Arcade">Arcade</option>
+                    <option value="Action">Action</option>
+                    <option value="Table Games">Table Games</option>
+                    <option value="Dice">Dice</option>
                   </select>
                 </div>
                 <div>
@@ -1056,6 +1079,10 @@ export const AdminLayout: React.FC = () => {
                 />
               </div>
 
+              <div>
+                <label className="block text-[#8493A1] mb-1 font-semibold">HTTPS Game Launch URL (optional, required to activate)</label>
+                <input type="url" value={newGame.gameUrl} onChange={e => setNewGame({ ...newGame, gameUrl: e.target.value })} placeholder="https://game-host.example/" className="w-full bg-[#101B24] border border-[#172631] focus:border-[#7B22FF] rounded-xl py-2.5 px-3 text-white outline-none" />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[#8493A1] mb-1 font-semibold">Status Badge</label>
@@ -1090,7 +1117,7 @@ export const AdminLayout: React.FC = () => {
                   disabled={loading}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-[#7B22FF] to-[#A83DF4] text-white font-bold text-xs shadow-lg shadow-[#7B22FF]/30 hover:opacity-95 transition"
                 >
-                  {loading ? 'Publishing Game...' : 'Publish Game to User App'}
+                  {loading ? 'Saving Game...' : 'Save Game to Catalogue'}
                 </button>
               </div>
             </form>

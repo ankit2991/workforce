@@ -35,7 +35,7 @@ export const GamingCashOutModal: React.FC<GamingCashOutModalProps> = ({
       await apiRequest('/gaming-wallet/cash-out', {
         method: 'POST',
         body: JSON.stringify({ amount }),
-      });
+      }, { fallback: false, timeoutMs: 10000 });
       toast.success(`MYR ${amount.toFixed(2)} cashed out to Main Wallet!`);
       onSuccess();
       onClose();

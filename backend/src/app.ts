@@ -22,6 +22,7 @@ import notificationsRoutes from './modules/notifications/notifications.routes';
 import adminRoutes from './modules/admin/admin.routes';
 
 import { getGameCategories } from './modules/games/games.controller';
+import { asyncHandler } from './middleware/asyncHandler';
 import { getProductCategories, getProducts, getProductBySlug } from './modules/shop/shop.controller';
 import { getPublicUserActivity } from './modules/admin/admin.controller';
 
@@ -29,9 +30,19 @@ const app = express();
 
 // Global Security & Utility Middlewares
 app.use(helmet({ contentSecurityPolicy: false }));
+// Browser origins must be explicitly allowed for bearer-token API calls.
+// FRONTEND_URL can list multiple origins separated by commas.
+const allowedOrigins = new Set([
+  'http://localhost:5173',
+  'http://localhost:5175',
+  'https://workpay.manavtechlabs.com',
+  ...(process.env.FRONTEND_URL || '').split(',').map(x => x.trim()).filter(Boolean),
+]);
 app.use(cors({
-  origin: '*',
-  credentials: true,
+  origin: (origin, callback) => callback(null, !origin || allowedOrigins.has(origin)),
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false, // The app uses Bearer tokens, not cross-origin cookies.
 }));
 app.use(morgan('dev'));
 app.use(express.json());
@@ -64,7 +75,7 @@ v1Router.use('/salary-advances', salaryRoutes);
 v1Router.use('/withdrawals', withdrawalsRoutes);
 v1Router.use('/gaming-wallet', gamingRoutes);
 v1Router.use('/games', gamesRoutes);
-v1Router.get('/game-categories', getGameCategories);
+v1Router.get('/game-categories', asyncHandler(getGameCategories));
 v1Router.use('/shop', shopRoutes);
 v1Router.get('/products', getProducts);
 v1Router.get('/products/:slug', getProductBySlug);

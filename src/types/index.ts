@@ -81,6 +81,7 @@ export interface Game {
   status: 'HOT' | 'NEW' | 'POPULAR' | 'DEFAULT';
   tag?: string;
   isFeatured: boolean;
+  isActive?: boolean;
 }
 
 export interface Product {

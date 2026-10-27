@@ -1,4 +1,4 @@
-const CACHE_NAME = "app-assets-v1";
+const CACHE_NAME = "app-assets-v3";
 const OFFLINE_URL = "/offline.html";
 // Never precache "/" (the app shell). Its HTML embeds Vite-hashed asset URLs
 // that change on every publish, so a cached shell points at dead chunks.
@@ -39,8 +39,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Never intercept auth paths.
-  if (url.pathname.startsWith("/auth")) {
+  // API responses are never cached by the service worker: a stale empty
+  // /games response can hide newly published games. Let network errors surface.
+  if (url.pathname.startsWith("/api/") || url.pathname === "/api" ||
+      url.pathname.startsWith("/auth")) {
     return;
   }
 
